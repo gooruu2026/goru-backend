@@ -9,7 +9,7 @@ app.use(express.json());
 const PORT = process.env.PORT || 10000;
 
 // Token de Mapbox integrado directamente para pruebas
-const MAPBOX_TOKEN = process.env.MAPBOX_ACCESS_TOKEN || 'pk.eyJ1IjoiZ29ydTIwMjYiLCJhIjoiY211Ym94emIzMGlnODQ4c2JrNnFyZG40OCJ9.au_s_1ynUiNDfNP7axIlyg';
+const MAPBOX_TOKEN = process.env.MAPBOX_ACCESS_TOKEN || 'pk.eyJ1IjoiZ29ydTIwMjYiLCJhIjoiY211Ym94emIzMGlnODQ4c2JrNnFyZG40OCJ9.au_s_1ynUiNDfNP7axIlyg':
 
 app.get('/', (req, res) => {
   res.json({ estado: 'OK', sistema: 'Servidor de Goru activo' });
