@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Goru - Viajes y Envíos</title>
   
-  <!-- Mapbox GL JS CDN -->
+  <!-- Mapbox GL JS -->
   <script src="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js"></script>
   <link href="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css" rel="stylesheet" />
 
@@ -14,7 +14,7 @@
       box-sizing: border-box;
       margin: 0;
       padding: 0;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     }
 
     body {
@@ -25,38 +25,33 @@
       overflow: hidden;
     }
 
-    /* Encabezado Superior */
     header {
       background-color: #111827;
       color: #ffffff;
-      padding: 16px 20px;
+      padding: 14px 20px;
       display: flex;
       justify-content: space-between;
       align-items: center;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
       z-index: 10;
     }
 
     header h1 {
-      font-size: 1.5rem;
+      font-size: 1.4rem;
       font-weight: 800;
-      letter-spacing: -0.5px;
-      color: #10b981; /* Verde Goru */
+      color: #10b981;
     }
 
-    /* Contenedor del Mapa */
     #map {
       flex: 1;
       width: 100%;
     }
 
-    /* Panel Flotante Inferior */
     .panel-cotizador {
       background: #ffffff;
-      border-top-left-radius: 24px;
-      border-top-right-radius: 24px;
-      padding: 20px;
-      box-shadow: 0 -4px 20px rgba(0,0,0,0.1);
+      border-top-left-radius: 20px;
+      border-top-right-radius: 20px;
+      padding: 18px;
+      box-shadow: 0 -4px 20px rgba(0,0,0,0.15);
       position: absolute;
       bottom: 0;
       left: 0;
@@ -64,20 +59,27 @@
       z-index: 10;
     }
 
+    .instruccion {
+      font-size: 0.85rem;
+      color: #4b5563;
+      margin-bottom: 12px;
+      text-align: center;
+      font-weight: 600;
+    }
+
     .selector-vehiculos {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
       gap: 10px;
-      margin-bottom: 16px;
+      margin-bottom: 12px;
     }
 
     .tarjeta-vehiculo {
       border: 2px solid #e5e7eb;
-      border-radius: 14px;
-      padding: 12px 8px;
+      border-radius: 12px;
+      padding: 10px 4px;
       text-align: center;
       cursor: pointer;
-      transition: all 0.2s ease;
     }
 
     .tarjeta-vehiculo.seleccionado {
@@ -85,15 +87,25 @@
       background-color: #ecfdf5;
     }
 
-    .tarjeta-vehiculo h3 {
-      font-size: 0.95rem;
-      color: #1f2937;
-      margin-bottom: 4px;
+    .resumen-viaje {
+      background: #f9fafb;
+      border-radius: 10px;
+      padding: 10px;
+      margin-bottom: 12px;
+      display: flex;
+      justify-content: space-around;
+      text-align: center;
     }
 
-    .tarjeta-vehiculo p {
+    .resumen-item span {
+      display: block;
       font-size: 0.75rem;
       color: #6b7280;
+    }
+
+    .resumen-item strong {
+      font-size: 1.1rem;
+      color: #111827;
     }
 
     .btn-solicitar {
@@ -101,16 +113,16 @@
       background-color: #10b981;
       color: #ffffff;
       border: none;
-      padding: 16px;
-      border-radius: 14px;
-      font-size: 1.1rem;
+      padding: 14px;
+      border-radius: 12px;
+      font-size: 1rem;
       font-weight: 700;
       cursor: pointer;
-      box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
     }
 
-    .btn-solicitar:active {
-      transform: scale(0.98);
+    .btn-solicitar:disabled {
+      background-color: #9ca3af;
+      cursor: not-allowed;
     }
   </style>
 </head>
@@ -118,34 +130,47 @@
 
   <header>
     <h1>GORU</h1>
-    <span style="font-size: 0.85rem; background: #374151; padding: 4px 10px; border-radius: 12px;">Pasajero</span>
+    <span id="estado-red" style="font-size: 0.8rem; background: #059669; padding: 4px 8px; border-radius: 8px;">Conectado</span>
   </header>
 
   <div id="map"></div>
 
   <div class="panel-cotizador">
+    <div class="instruccion" id="instruccion-texto">📍 Tocá el mapa para marcar el punto de ORIGEN</div>
+
     <div class="selector-vehiculos">
-      <div class="tarjeta-vehiculo seleccionado" onclick="seleccionar('Auto')">
-        <h3>🚗 Auto</h3>
-        <p>Viajes rápidos</p>
+      <div class="tarjeta-vehiculo seleccionado" onclick="seleccionarTipo('Auto', this)">
+        <h4>🚗 Auto</h4>
       </div>
-      <div class="tarjeta-vehiculo" onclick="seleccionar('Moto')">
-        <h3>🛵 Moto</h3>
-        <p>Económico</p>
+      <div class="tarjeta-vehiculo" onclick="seleccionarTipo('Moto', this)">
+        <h4>🛵 Moto</h4>
       </div>
-      <div class="tarjeta-vehiculo" onclick="seleccionar('Flete')">
-        <h3>🚚 Flete</h3>
-        <p>Cargas y envíos</p>
+      <div class="tarjeta-vehiculo" onclick="seleccionarTipo('Flete', this)">
+        <h4>🚚 Flete</h4>
       </div>
     </div>
 
-    <button class="btn-solicitar" onclick="pedirGoru()">Pedir Goru</button>
+    <div class="resumen-viaje">
+      <div class="resumen-item">
+        <span>Distancia</span>
+        <strong id="val-distancia">0.0 km</strong>
+      </div>
+      <div class="resumen-item">
+        <span>Tiempo</span>
+        <strong id="val-tiempo">0 min</strong>
+      </div>
+      <div class="resumen-item">
+        <span>Precio</span>
+        <strong id="val-precio" style="color: #10b981;">$0</strong>
+      </div>
+    </div>
+
+    <button class="btn-solicitar" id="btn-pedir" disabled onclick="confirmarViaje()">Elegí origen y destino</button>
   </div>
 
   <script>
     mapboxgl.accessToken = 'pk.eyJ1IjoiZ29ydTIwMjYiLCJhIjoiY211Ym94emIzMGlnODQ4c2JrNnFyZG40OCJ9.au_s_1ynUiNDfNP7axIlyg';
-    
-    // Inicializar mapa centrado en Buenos Aires por defecto
+
     const map = new mapboxgl.Map({
       container: 'map',
       style: 'mapbox://styles/mapbox/streets-v12',
@@ -153,32 +178,156 @@
       zoom: 13
     });
 
-    // Agregar controles de navegación
-    map.addControl(new mapboxgl.NavigationControl());
+    let origenCoords = null;
+    let destinoCoords = null;
+    let origenMarker = null;
+    let destinoMarker = null;
+    let tipoVehiculo = 'Auto';
+    let cotizacionActual = null;
 
-    // Obtener ubicación GPS actual del usuario
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition((pos) => {
-        const { latitude, longitude } = pos.coords;
-        map.flyTo({ center: [longitude, latitude], zoom: 15 });
+    // Manejo de clicks en el mapa para Origen y Destino
+    map.on('click', (e) => {
+      const coords = { lng: e.lngLat.lng, lat: e.lngLat.lat };
 
-        new mapboxgl.Marker({ color: '#10b981' })
-          .setLngLat([longitude, latitude])
-          .setPopup(new mapboxgl.Popup().setHTML("<b>Tu ubicación</b>"))
-          .addTo(map);
-      });
-    }
+      if (!origenCoords) {
+        origenCoords = coords;
+        origenMarker = new mapboxgl.Marker({ color: '#10b981' }).setLngLat([coords.lng, coords.lat]).addTo(map);
+        document.getElementById('instruccion-texto').innerText = "🏁 Ahora tocá el mapa para marcar el DESTINO";
+      } else if (!destinoCoords) {
+        destinoCoords = coords;
+        destinoMarker = new mapboxgl.Marker({ color: '#ef4444' }).setLngLat([coords.lng, coords.lat]).addTo(map);
+        document.getElementById('instruccion-texto').innerText = "✅ Ruta seleccionada. Cotizando...";
+        cotizarRuta();
+      } else {
+        // Reiniciar puntos
+        if (origenMarker) origenMarker.remove();
+        if (destinoMarker) destinoMarker.remove();
+        if (map.getSource('route')) {
+          map.removeLayer('route');
+          map.removeSource('route');
+        }
+        origenCoords = coords;
+        destinoCoords = null;
+        cotizacionActual = null;
+        origenMarker = new mapboxgl.Marker({ color: '#10b981' }).setLngLat([coords.lng, coords.lat]).addTo(map);
+        document.getElementById('instruccion-texto').innerText = "🏁 Ahora tocá el mapa para marcar el DESTINO";
+        resetResumen();
+      }
+    });
 
-    let tipoSeleccionado = 'Auto';
-
-    function seleccionar(tipo) {
-      tipoSeleccionado = tipo;
+    function seleccionarTipo(tipo, elemento) {
+      tipoVehiculo = tipo;
       document.querySelectorAll('.tarjeta-vehiculo').forEach(el => el.classList.remove('seleccionado'));
-      event.currentTarget.classList.add('seleccionado');
+      elemento.classList.add('seleccionado');
+      if (origenCoords && destinoCoords) {
+        cotizarRuta();
+      }
     }
 
-    function pedirGoru() {
-      alert(`Buscando choferes para categoría: ${tipoSeleccionado}`);
+    async function cotizarRuta() {
+      try {
+        const respuesta = await fetch('/api/cotizar', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            origen: origenCoords,
+            destino: destinoCoords,
+            tipoVehiculo
+          })
+        });
+
+        const data = await respuesta.json();
+
+        if (data.exito) {
+          cotizacionActual = data;
+          document.getElementById('val-distancia').innerText = `${data.distanciaKm} km`;
+          document.getElementById('val-tiempo').innerText = `${data.duracionMin} min`;
+          document.getElementById('val-precio').innerText = `$${data.precioEstimado}`;
+          
+          const btn = document.getElementById('btn-pedir');
+          btn.disabled = false;
+          btn.innerText = `Pedir Goru (${tipoVehiculo})`;
+
+          dibujarRuta(data.geometriaRuta);
+          document.getElementById('instruccion-texto').innerText = "Listo para solicitar tu viaje";
+        } else {
+          alert('Error al calcular la ruta: ' + data.error);
+        }
+      } catch (err) {
+        alert('Error de conexión con el servidor.');
+      }
+    }
+
+    function dibujarRuta(geometria) {
+      if (map.getSource('route')) {
+        map.getSource('route').setData({
+          'type': 'Feature',
+          'properties': {},
+          'geometry': geometria
+        });
+      } else {
+        map.addSource('route', {
+          'type': 'geojson',
+          'data': {
+            'type': 'Feature',
+            'properties': {},
+            'geometry': geometria
+          }
+        });
+        map.addLayer({
+          'id': 'route',
+          'type': 'line',
+          'source': 'route',
+          'layout': { 'line-join': 'round', 'line-cap': 'round' },
+          'paint': { 'line-color': '#10b981', 'line-width': 5 }
+        });
+      }
+    }
+
+    function resetResumen() {
+      document.getElementById('val-distancia').innerText = "0.0 km";
+      document.getElementById('val-tiempo').innerText = "0 min";
+      document.getElementById('val-precio').innerText = "$0";
+      const btn = document.getElementById('btn-pedir');
+      btn.disabled = true;
+      btn.innerText = "Elegí origen y destino";
+    }
+
+    async function confirmarViaje() {
+      if (!cotizacionActual) return;
+
+      const btn = document.getElementById('btn-pedir');
+      btn.disabled = true;
+      btn.innerText = "Enviando solicitud...";
+
+      try {
+        const respuesta = await fetch('/api/viajes/solicitar', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            pasajeroId: "66bc3a29e1f0610012345678", // ID de usuario de prueba
+            origen: { direccion: "Punto de Origen", lat: origenCoords.lat, lng: origenCoords.lng },
+            destino: { direccion: "Punto de Destino", lat: destinoCoords.lat, lng: destinoCoords.lng },
+            tipoVehiculo,
+            distanciaKm: cotizacionActual.distanciaKm,
+            duracionMin: cotizacionActual.duracionMin,
+            precioEstimado: cotizacionActual.precioEstimado
+          })
+        });
+
+        const resData = await respuesta.json();
+
+        if (resData.exito) {
+          alert('🎉 ¡Viaje solicitado con éxito! Guardado en la base de datos.');
+          btn.innerText = "Buscando chofer asignado...";
+        } else {
+          alert('Error al solicitar viaje: ' + resData.error);
+          btn.disabled = false;
+        }
+      } catch (error) {
+        alert('Error al conectar con la API.');
+        btn.disabled = false;
+      }
     }
   </script>
 </body>
