@@ -2,6 +2,11 @@ const express = require('express');
 const axios = require('axios');
 const mongoose = require('mongoose');
 
+// Importar los modelos de la base de datos
+const User = require('./models/User');
+const Ride = require('./models/Ride');
+const Wallet = require('./models/Wallet');
+
 const app = express();
 app.use(express.json());
 
@@ -27,7 +32,7 @@ app.get('/', (req, res) => {
   });
 });
 
-// Endpoint de Cotización
+// Endpoint de Cotización (Mapbox)
 app.post('/api/cotizar', async (req, res) => {
   try {
     const { origen, destino, tipoVehiculo } = req.body;
