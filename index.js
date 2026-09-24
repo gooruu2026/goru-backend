@@ -10,6 +10,9 @@ const Wallet = require('./models/Wallet');
 const app = express();
 app.use(express.json());
 
+// Servir la interfaz gráfica (Frontend) desde la carpeta 'public'
+app.use(express.static('public'));
+
 const PORT = process.env.PORT || 3000;
 const MAPBOX_TOKEN = process.env.MAPBOX_ACCESS_TOKEN || 'pk.eyJ1IjoiZ29ydTIwMjYiLCJhIjoiY211Ym94emIzMGlnODQ4c2JrNnFyZG40OCJ9.au_s_1ynUiNDfNP7axIlyg';
 const MONGO_URI = process.env.MONGO_URI;
@@ -23,8 +26,8 @@ if (MONGO_URI) {
   console.log('⚠️ No se proporcionó MONGO_URI en las variables de entorno.');
 }
 
-// Ruta principal de prueba
-app.get('/', (req, res) => {
+// Ruta principal de prueba o salud de la API
+app.get('/api/health', (req, res) => {
   res.json({
     mensaje: "¡Bienvenido a la API de Goru!",
     estado: "Servidor activo",
@@ -141,7 +144,6 @@ app.post('/api/viajes/solicitar', async (req, res) => {
       return res.status(400).json({ error: "Faltan parámetros requeridos para solicitar el viaje." });
     }
 
-    // Calcular la comisión de la plataforma (ejemplo: 10%)
     const porcentajeComision = 0.10;
     const comisionPlataforma = Math.round(precioEstimado * porcentajeComision);
 
@@ -230,7 +232,6 @@ app.put('/api/viajes/finalizar', async (req, res) => {
     viaje.estado = 'finalizado';
     await viaje.save();
 
-    // Descontar la comisión de la billetera virtual del chofer si el pago fue en efectivo
     if (viaje.chofer && viaje.metodoPago === 'efectivo') {
       const billetera = await Wallet.findOne({ chofer: viaje.chofer });
       if (billetera) {
