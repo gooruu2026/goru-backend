@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Goru - Viajes y Envíos</title>
+  
+  <!-- Mapbox GL JS CDN -->
+  <script src="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js"></script>
+  <link href="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css" rel="stylesheet" />
+
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+
+    body {
+      background-color: #f4f5f7;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    /* Encabezado Superior */
+    header {
+      background-color: #111827;
+      color: #ffffff;
+      padding: 16px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+      z-index: 10;
+    }
+
+    header h1 {
+      font-size: 1.5rem;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      color: #10b981; /* Verde Goru */
+    }
+
+    /* Contenedor del Mapa */
+    #map {
+      flex: 1;
+      width: 100%;
+    }
+
+    /* Panel Flotante Inferior */
+    .panel-cotizador {
+      background: #ffffff;
+      border-top-left-radius: 24px;
+      border-top-right-radius: 24px;
+      padding: 20px;
+      box-shadow: 0 -4px 20px rgba(0,0,0,0.1);
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      z-index: 10;
+    }
+
+    .selector-vehiculos {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+
+    .tarjeta-vehiculo {
+      border: 2px solid #e5e7eb;
+      border-radius: 14px;
+      padding: 12px 8px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .tarjeta-vehiculo.seleccionado {
+      border-color: #10b981;
+      background-color: #ecfdf5;
+    }
+
+    .tarjeta-vehiculo h3 {
+      font-size: 0.95rem;
+      color: #1f2937;
+      margin-bottom: 4px;
+    }
+
+    .tarjeta-vehiculo p {
+      font-size: 0.75rem;
+      color: #6b7280;
+    }
+
+    .btn-solicitar {
+      width: 100%;
+      background-color: #10b981;
+      color: #ffffff;
+      border: none;
+      padding: 16px;
+      border-radius: 14px;
+      font-size: 1.1rem;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+    }
+
+    .btn-solicitar:active {
+      transform: scale(0.98);
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>GORU</h1>
+    <span style="font-size: 0.85rem; background: #374151; padding: 4px 10px; border-radius: 12px;">Pasajero</span>
+  </header>
+
+  <div id="map"></div>
+
+  <div class="panel-cotizador">
+    <div class="selector-vehiculos">
+      <div class="tarjeta-vehiculo seleccionado" onclick="seleccionar('Auto')">
+        <h3>🚗 Auto</h3>
+        <p>Viajes rápidos</p>
+      </div>
+      <div class="tarjeta-vehiculo" onclick="seleccionar('Moto')">
+        <h3>🛵 Moto</h3>
+        <p>Económico</p>
+      </div>
+      <div class="tarjeta-vehiculo" onclick="seleccionar('Flete')">
+        <h3>🚚 Flete</h3>
+        <p>Cargas y envíos</p>
+      </div>
+    </div>
+
+    <button class="btn-solicitar" onclick="pedirGoru()">Pedir Goru</button>
+  </div>
+
+  <script>
+    mapboxgl.accessToken = 'pk.eyJ1IjoiZ29ydTIwMjYiLCJhIjoiY211Ym94emIzMGlnODQ4c2JrNnFyZG40OCJ9.au_s_1ynUiNDfNP7axIlyg';
+    
+    // Inicializar mapa centrado en Buenos Aires por defecto
+    const map = new mapboxgl.Map({
+      container: 'map',
+      style: 'mapbox://styles/mapbox/streets-v12',
+      center: [-58.3816, -34.6037],
+      zoom: 13
+    });
+
+    // Agregar controles de navegación
+    map.addControl(new mapboxgl.NavigationControl());
+
+    // Obtener ubicación GPS actual del usuario
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition((pos) => {
+        const { latitude, longitude } = pos.coords;
+        map.flyTo({ center: [longitude, latitude], zoom: 15 });
+
+        new mapboxgl.Marker({ color: '#10b981' })
+          .setLngLat([longitude, latitude])
+          .setPopup(new mapboxgl.Popup().setHTML("<b>Tu ubicación</b>"))
+          .addTo(map);
+      });
+    }
+
+    let tipoSeleccionado = 'Auto';
+
+    function seleccionar(tipo) {
+      tipoSeleccionado = tipo;
+      document.querySelectorAll('.tarjeta-vehiculo').forEach(el => el.classList.remove('seleccionado'));
+      event.currentTarget.classList.add('seleccionado');
+    }
+
+    function pedirGoru() {
+      alert(`Buscando choferes para categoría: ${tipoSeleccionado}`);
+    }
+  </script>
+</body>
+</html>
