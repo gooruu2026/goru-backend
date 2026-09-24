@@ -45,7 +45,6 @@ app.post('/api/usuarios/registro', async (req, res) => {
       return res.status(400).json({ error: "Nombre, email y teléfono son obligatorios." });
     }
 
-    // Verificar si ya existe el email o teléfono
     const usuarioExistente = await User.findOne({ $or: [{ email }, { telefono }] });
     if (usuarioExistente) {
       return res.status(400).json({ error: "El email o teléfono ya se encuentra registrado." });
@@ -61,7 +60,6 @@ app.post('/api/usuarios/registro', async (req, res) => {
 
     await nuevoUsuario.save();
 
-    // Si se registra como chofer, le creamos automáticamente su Billetera Virtual
     if (nuevoUsuario.rol === 'chofer') {
       const nuevaBilletera = new Wallet({ chofer: nuevoUsuario._id, saldo: 0 });
       await nuevaBilletera.save();
@@ -78,7 +76,7 @@ app.post('/api/usuarios/registro', async (req, res) => {
   }
 });
 
-// 2. Login / Consulta de Usuario por Teléfono
+// 2. Login / Consulta por Teléfono
 app.post('/api/usuarios/login', async (req, res) => {
   try {
     const { telefono } = req.body;
@@ -102,7 +100,7 @@ app.post('/api/usuarios/login', async (req, res) => {
   }
 });
 
-// 3. Cambiar estado de disponibilidad del Chofer (Activo / Inactivo)
+// 3. Cambiar disponibilidad del Chofer
 app.put('/api/usuarios/chofer/disponibilidad', async (req, res) => {
   try {
     const { choferId, activo, ubicacionActual } = req.body;
@@ -127,6 +125,133 @@ app.put('/api/usuarios/chofer/disponibilidad', async (req, res) => {
 
   } catch (error) {
     res.status(500).json({ error: "Error al actualizar disponibilidad", detalle: error.message });
+  }
+});
+
+// ==========================================
+// RUTAS DE VIAJES Y ENVÍOS
+// ==========================================
+
+// 1. Solicitar un viaje
+app.post('/api/viajes/solicitar', async (req, res) => {
+  try {
+    const { pasajeroId, origen, destino, tipoVehiculo, precioEstimado, distanciaKm, duracionMin } = req.body;
+
+    if (!pasajeroId || !origen || !destino || !tipoVehiculo || !precioEstimado) {
+      return res.status(400).json({ error: "Faltan parámetros requeridos para solicitar el viaje." });
+    }
+
+    // Calcular la comisión de la plataforma (ejemplo: 10%)
+    const porcentajeComision = 0.10;
+    const comisionPlataforma = Math.round(precioEstimado * porcentajeComision);
+
+    const nuevoViaje = new Ride({
+      pasajero: pasajeroId,
+      origen,
+      destino,
+      tipoVehiculo,
+      distanciaKm,
+      duracionMin,
+      precioEstimado,
+      comisionPlataforma,
+      estado: 'solicitado'
+    });
+
+    await nuevoViaje.save();
+
+    res.status(201).json({
+      exito: true,
+      mensaje: "Viaje solicitado con éxito. Buscando choferes...",
+      viaje: nuevoViaje
+    });
+
+  } catch (error) {
+    res.status(500).json({ error: "Error al crear la solicitud de viaje", detalle: error.message });
+  }
+});
+
+// 2. Obtener viajes pendientes de aceptación (para choferes)
+app.get('/api/viajes/pendientes', async (req, res) => {
+  try {
+    const viajesPendientes = await Ride.find({ estado: 'solicitado' }).populate('pasajero', 'nombre telefono');
+    res.json({
+      exito: true,
+      cantidad: viajesPendientes.length,
+      viajes: viajesPendientes
+    });
+  } catch (error) {
+    res.status(500).json({ error: "Error al consultar viajes pendientes", detalle: error.message });
+  }
+});
+
+// 3. Aceptar un viaje (por parte del Chofer)
+app.put('/api/viajes/aceptar', async (req, res) => {
+  try {
+    const { viajeId, choferId } = req.body;
+
+    const viaje = await Ride.findById(viajeId);
+    if (!viaje) {
+      return res.status(404).json({ error: "Viaje no encontrado." });
+    }
+
+    if (viaje.estado !== 'solicitado') {
+      return res.status(400).json({ error: "El viaje ya fue aceptado o cancelado por otro chofer." });
+    }
+
+    viaje.chofer = choferId;
+    viaje.estado = 'aceptado';
+    await viaje.save();
+
+    res.json({
+      exito: true,
+      mensaje: "Viaje aceptado correctamente",
+      viaje
+    });
+
+  } catch (error) {
+    res.status(500).json({ error: "Error al aceptar el viaje", detalle: error.message });
+  }
+});
+
+// 4. Finalizar viaje y descontar comisión de la billetera
+app.put('/api/viajes/finalizar', async (req, res) => {
+  try {
+    const { viajeId } = req.body;
+
+    const viaje = await Ride.findById(viajeId);
+    if (!viaje) {
+      return res.status(404).json({ error: "Viaje no encontrado." });
+    }
+
+    if (viaje.estado === 'finalizado') {
+      return res.status(400).json({ error: "El viaje ya se encuentra finalizado." });
+    }
+
+    viaje.estado = 'finalizado';
+    await viaje.save();
+
+    // Descontar la comisión de la billetera virtual del chofer si el pago fue en efectivo
+    if (viaje.chofer && viaje.metodoPago === 'efectivo') {
+      const billetera = await Wallet.findOne({ chofer: viaje.chofer });
+      if (billetera) {
+        billetera.saldo -= viaje.comisionPlataforma;
+        billetera.historialMovimientos.push({
+          tipo: 'comision_descuento',
+          monto: viaje.comisionPlataforma,
+          descripcion: `Descuento por comisión del viaje ID: ${viaje._id}`
+        });
+        await billetera.save();
+      }
+    }
+
+    res.json({
+      exito: true,
+      mensaje: "Viaje finalizado con éxito.",
+      viaje
+    });
+
+  } catch (error) {
+    res.status(500).json({ error: "Error al finalizar el viaje", detalle: error.message });
   }
 });
 
@@ -185,4 +310,3 @@ app.post('/api/cotizar', async (req, res) => {
 app.listen(PORT, () => {
   console.log(`Servidor Goru corriendo en puerto ${PORT}`);
 });
-
