@@ -32,7 +32,107 @@ app.get('/', (req, res) => {
   });
 });
 
-// Endpoint de Cotización (Mapbox)
+// ==========================================
+// RUTAS DE USUARIOS Y CHOFERES
+// ==========================================
+
+// 1. Registro de Usuario (Pasajero o Chofer)
+app.post('/api/usuarios/registro', async (req, res) => {
+  try {
+    const { nombre, email, telefono, rol, datosChofer } = req.body;
+
+    if (!nombre || !email || !telefono) {
+      return res.status(400).json({ error: "Nombre, email y teléfono son obligatorios." });
+    }
+
+    // Verificar si ya existe el email o teléfono
+    const usuarioExistente = await User.findOne({ $or: [{ email }, { telefono }] });
+    if (usuarioExistente) {
+      return res.status(400).json({ error: "El email o teléfono ya se encuentra registrado." });
+    }
+
+    const nuevoUsuario = new User({
+      nombre,
+      email,
+      telefono,
+      rol: rol || 'pasajero',
+      datosChofer: rol === 'chofer' ? datosChofer : undefined
+    });
+
+    await nuevoUsuario.save();
+
+    // Si se registra como chofer, le creamos automáticamente su Billetera Virtual
+    if (nuevoUsuario.rol === 'chofer') {
+      const nuevaBilletera = new Wallet({ chofer: nuevoUsuario._id, saldo: 0 });
+      await nuevaBilletera.save();
+    }
+
+    res.status(201).json({
+      exito: true,
+      mensaje: "Usuario registrado correctamente",
+      usuario: nuevoUsuario
+    });
+
+  } catch (error) {
+    res.status(500).json({ error: "Error al registrar usuario", detalle: error.message });
+  }
+});
+
+// 2. Login / Consulta de Usuario por Teléfono
+app.post('/api/usuarios/login', async (req, res) => {
+  try {
+    const { telefono } = req.body;
+
+    if (!telefono) {
+      return res.status(400).json({ error: "El número de teléfono es obligatorio." });
+    }
+
+    const usuario = await User.findOne({ telefono });
+    if (!usuario) {
+      return res.status(404).json({ error: "Usuario no encontrado." });
+    }
+
+    res.json({
+      exito: true,
+      usuario
+    });
+
+  } catch (error) {
+    res.status(500).json({ error: "Error al iniciar sesión", detalle: error.message });
+  }
+});
+
+// 3. Cambiar estado de disponibilidad del Chofer (Activo / Inactivo)
+app.put('/api/usuarios/chofer/disponibilidad', async (req, res) => {
+  try {
+    const { choferId, activo, ubicacionActual } = req.body;
+
+    const chofer = await User.findById(choferId);
+    if (!chofer || chofer.rol !== 'chofer') {
+      return res.status(404).json({ error: "Chofer no encontrado." });
+    }
+
+    chofer.datosChofer.activo = activo;
+    if (ubicacionActual) {
+      chofer.datosChofer.ubicacionActual = ubicacionActual;
+    }
+
+    await chofer.save();
+
+    res.json({
+      exito: true,
+      mensaje: `Chofer ahora está ${activo ? 'Disponible' : 'Fuera de servicio'}`,
+      chofer
+    });
+
+  } catch (error) {
+    res.status(500).json({ error: "Error al actualizar disponibilidad", detalle: error.message });
+  }
+});
+
+// ==========================================
+// RUTA DE COTIZACIÓN (MAPBOX)
+// ==========================================
 app.post('/api/cotizar', async (req, res) => {
   try {
     const { origen, destino, tipoVehiculo } = req.body;
@@ -85,3 +185,4 @@ app.post('/api/cotizar', async (req, res) => {
 app.listen(PORT, () => {
   console.log(`Servidor Goru corriendo en puerto ${PORT}`);
 });
+
