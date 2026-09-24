@@ -22,7 +22,7 @@ const userSchema = new mongoose.Schema({
     enum: ['pasajero', 'chofer', 'admin'],
     default: 'pasajero'
   },
-  // Datos específicos si el usuario es Chofer
+  // Datos y documentación requerida para Choferes
   datosChofer: {
     tipoVehiculo: {
       type: String,
@@ -30,6 +30,18 @@ const userSchema = new mongoose.Schema({
     },
     patente: String,
     modeloVehiculo: String,
+    
+    // Fotos y Documentación requerida
+    fotoPerfilUrl: String,
+    fotoLicenciaUrl: String,
+    fotoVehiculoUrl: String,
+    fotoCedulaPatenteUrl: String,
+
+    // Estado de validación
+    verificado: {
+      type: Boolean,
+      default: false
+    },
     activo: {
       type: Boolean,
       default: false
