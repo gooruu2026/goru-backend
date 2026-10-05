@@ -3,332 +3,283 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Goru - Viajes y Envíos</title>
+  <title>Goru - Pedir Viaje</title>
   
-  <!-- Mapbox GL JS -->
-  <script src="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js"></script>
+  <!-- Mapbox GL JS CSS & JS -->
   <link href="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css" rel="stylesheet" />
+  <script src="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js"></script>
+
+  <!-- Mapbox Geocoder (Buscador de direcciones) -->
+  <link rel="stylesheet" href="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v5.0.0/mapbox-gl-geocoder.css" type="text/css">
+  <script src="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v5.0.0/mapbox-gl-geocoder.min.js"></script>
 
   <style>
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+    body { display: flex; flex-direction: column; height: 100vh; background-color: #121212; color: #fff; }
 
-    body {
-      background-color: #f4f5f7;
-      display: flex;
-      flex-direction: column;
-      height: 100vh;
-      overflow: hidden;
-    }
+    /* Encabezado */
+    header { background: #1f1f1f; padding: 15px; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #00e676; }
+    header h1 { color: #00e676; font-size: 22px; font-weight: bold; letter-spacing: 1px; }
+    .status { background: #00e67622; color: #00e676; padding: 5px 12px; border-radius: 20px; font-size: 12px; border: 1px solid #00e676; }
 
-    header {
-      background-color: #111827;
-      color: #ffffff;
-      padding: 14px 20px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      z-index: 10;
-    }
+    /* Contenedor del Mapa */
+    #map { flex: 1; width: 100%; height: 50vh; }
 
-    header h1 {
-      font-size: 1.4rem;
-      font-weight: 800;
-      color: #10b981;
-    }
+    /* Panel Inferior de Búsqueda y Cotización */
+    .panel { background: #1f1f1f; padding: 20px; border-radius: 20px 20px 0 0; box-shadow: 0 -5px 25px rgba(0,0,0,0.5); display: flex; flex-direction: column; gap: 12px; z-index: 10; }
 
-    #map {
-      flex: 1;
-      width: 100%;
-    }
+    /* Estilos para los Buscadores de Mapbox */
+    .mapboxgl-ctrl-geocoder { width: 100% !important; max-width: none !important; background-color: #2a2a2a !important; color: white !important; border-radius: 10px !important; box-shadow: none !important; border: 1px solid #444 !important; }
+    .mapboxgl-ctrl-geocoder--input { color: white !important; font-size: 14px !important; }
+    .mapboxgl-ctrl-geocoder--icon { fill: #00e676 !important; }
+    .mapboxgl-ctrl-geocoder .suggestions { background-color: #2a2a2a !important; border-radius: 10px; }
+    .mapboxgl-ctrl-geocoder .suggestions > li > a { color: #ddd !important; }
+    .mapboxgl-ctrl-geocoder .suggestions > .active > a { background-color: #00e676 !important; color: #000 !important; }
 
-    .panel-cotizador {
-      background: #ffffff;
-      border-top-left-radius: 20px;
-      border-top-right-radius: 20px;
-      padding: 18px;
-      box-shadow: 0 -4px 20px rgba(0,0,0,0.15);
-      position: absolute;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      z-index: 10;
-    }
+    /* Selección de Vehículos */
+    .vehiculos { display: flex; gap: 10px; justify-content: space-between; margin-top: 5px; }
+    .btn-vehiculo { flex: 1; padding: 10px; border: 1px solid #444; background: #2a2a2a; color: #ccc; border-radius: 10px; cursor: pointer; text-align: center; font-size: 13px; font-weight: bold; transition: all 0.2s; }
+    .btn-vehiculo.active { border-color: #00e676; background: #00e67622; color: #00e676; }
 
-    .instruccion {
-      font-size: 0.85rem;
-      color: #4b5563;
-      margin-bottom: 12px;
-      text-align: center;
-      font-weight: 600;
-    }
+    /* Resumen de Tarifas */
+    .resumen { display: flex; justify-content: space-between; align-items: center; background: #2a2a2a; padding: 12px 16px; border-radius: 12px; margin-top: 5px; }
+    .resumen-item { text-align: center; }
+    .resumen-item span { display: block; font-size: 11px; color: #aaa; }
+    .resumen-item strong { font-size: 16px; color: #fff; }
+    .resumen-item .precio { font-size: 20px; color: #00e676; font-weight: bold; }
 
-    .selector-vehiculos {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 10px;
-      margin-bottom: 12px;
-    }
-
-    .tarjeta-vehiculo {
-      border: 2px solid #e5e7eb;
-      border-radius: 12px;
-      padding: 10px 4px;
-      text-align: center;
-      cursor: pointer;
-    }
-
-    .tarjeta-vehiculo.seleccionado {
-      border-color: #10b981;
-      background-color: #ecfdf5;
-    }
-
-    .resumen-viaje {
-      background: #f9fafb;
-      border-radius: 10px;
-      padding: 10px;
-      margin-bottom: 12px;
-      display: flex;
-      justify-content: space-around;
-      text-align: center;
-    }
-
-    .resumen-item span {
-      display: block;
-      font-size: 0.75rem;
-      color: #6b7280;
-    }
-
-    .resumen-item strong {
-      font-size: 1.1rem;
-      color: #111827;
-    }
-
-    .btn-solicitar {
-      width: 100%;
-      background-color: #10b981;
-      color: #ffffff;
-      border: none;
-      padding: 14px;
-      border-radius: 12px;
-      font-size: 1rem;
-      font-weight: 700;
-      cursor: pointer;
-    }
-
-    .btn-solicitar:disabled {
-      background-color: #9ca3af;
-      cursor: not-allowed;
-    }
+    /* Botón de Confirmación */
+    .btn-pedir { width: 100%; padding: 15px; background: #00e676; color: #000; font-size: 16px; font-weight: bold; border: none; border-radius: 12px; cursor: pointer; transition: opacity 0.2s; }
+    .btn-pedir:disabled { background: #444; color: #888; cursor: not-allowed; }
   </style>
 </head>
 <body>
 
   <header>
     <h1>GORU</h1>
-    <span id="estado-red" style="font-size: 0.8rem; background: #059669; padding: 4px 8px; border-radius: 8px;">Conectado</span>
+    <div class="status">● Pasajero</div>
   </header>
 
+  <!-- Mapa -->
   <div id="map"></div>
 
-  <div class="panel-cotizador">
-    <div class="instruccion" id="instruccion-texto">📍 Tocá el mapa para marcar el punto de ORIGEN</div>
+  <!-- Panel de Control -->
+  <div class="panel">
+    <label style="font-size: 12px; color: #aaa;">PUNTO DE PARTIDA</label>
+    <div id="geocoder-origen"></div>
 
-    <div class="selector-vehiculos">
-      <div class="tarjeta-vehiculo seleccionado" onclick="seleccionarTipo('Auto', this)">
-        <h4>🚗 Auto</h4>
-      </div>
-      <div class="tarjeta-vehiculo" onclick="seleccionarTipo('Moto', this)">
-        <h4>🛵 Moto</h4>
-      </div>
-      <div class="tarjeta-vehiculo" onclick="seleccionarTipo('Flete', this)">
-        <h4>🚚 Flete</h4>
-      </div>
+    <label style="font-size: 12px; color: #aaa;">DESTINO</label>
+    <div id="geocoder-destino"></div>
+
+    <!-- Selección de Vehículo -->
+    <div class="vehiculos">
+      <button class="btn-vehiculo active" onclick="seleccionarVehiculo('Auto', this)">🚗 Auto</button>
+      <button class="btn-vehiculo" onclick="seleccionarVehiculo('Moto', this)">🛵 Moto</button>
+      <button class="btn-vehiculo" onclick="seleccionarVehiculo('Flete', this)">🚚 Flete</button>
     </div>
 
-    <div class="resumen-viaje">
+    <!-- Estimación de Precio y Tiempo -->
+    <div class="resumen">
       <div class="resumen-item">
         <span>Distancia</span>
-        <strong id="val-distancia">0.0 km</strong>
+        <strong id="distancia">- km</strong>
       </div>
       <div class="resumen-item">
         <span>Tiempo</span>
-        <strong id="val-tiempo">0 min</strong>
+        <strong id="tiempo">- min</strong>
       </div>
       <div class="resumen-item">
-        <span>Precio</span>
-        <strong id="val-precio" style="color: #10b981;">$0</strong>
+        <span>Estimado</span>
+        <div class="precio" id="precio">$0</div>
       </div>
     </div>
 
-    <button class="btn-solicitar" id="btn-pedir" disabled onclick="confirmarViaje()">Elegí origen y destino</button>
+    <button id="btnSolicitar" class="btn-pedir" disabled onclick="solicitarViaje()">Elegí origen y destino</button>
   </div>
 
   <script>
-    mapboxgl.accessToken = 'pk.eyJ1IjoiZ29ydTIwMjYiLCJhIjoiY211Ym94emIzMGlnODQ4c2JrNnFyZG40OCJ9.au_s_1ynUiNDfNP7axIlyg';
+    const MAPBOX_TOKEN = 'pk.eyJ1IjoiZ29ydTIwMjYiLCJhIjoiY211Ym94emIzMGlnODQ4c2JrNnFyZG40OCJ9.au_s_1ynUiNDfNP7axIlyg';
+    mapboxgl.accessToken = MAPBOX_TOKEN;
 
+    // Inicializar Mapa centrado por defecto
     const map = new mapboxgl.Map({
       container: 'map',
-      style: 'mapbox://styles/mapbox/streets-v12',
-      center: [-58.3816, -34.6037],
-      zoom: 13
+      style: 'mapbox://styles/mapbox/dark-v11',
+      center: [-58.3816, -34.6037], // Buenos Aires por defecto
+      zoom: 12
     });
 
     let origenCoords = null;
     let destinoCoords = null;
-    let origenMarker = null;
-    let destinoMarker = null;
-    let tipoVehiculo = 'Auto';
+    let origenTexto = "";
+    let destinoTexto = "";
+    let tipoVehiculoSeleccionado = 'Auto';
     let cotizacionActual = null;
 
-    // Manejo de clicks en el mapa para Origen y Destino
-    map.on('click', (e) => {
-      const coords = { lng: e.lngLat.lng, lat: e.lngLat.lat };
+    let markerOrigen = new mapboxgl.Marker({ color: '#00e676' });
+    let markerDestino = new mapboxgl.Marker({ color: '#ff1744' });
 
-      if (!origenCoords) {
-        origenCoords = coords;
-        origenMarker = new mapboxgl.Marker({ color: '#10b981' }).setLngLat([coords.lng, coords.lat]).addTo(map);
-        document.getElementById('instruccion-texto').innerText = "🏁 Ahora tocá el mapa para marcar el DESTINO";
-      } else if (!destinoCoords) {
-        destinoCoords = coords;
-        destinoMarker = new mapboxgl.Marker({ color: '#ef4444' }).setLngLat([coords.lng, coords.lat]).addTo(map);
-        document.getElementById('instruccion-texto').innerText = "✅ Ruta seleccionada. Cotizando...";
-        cotizarRuta();
-      } else {
-        // Reiniciar puntos
-        if (origenMarker) origenMarker.remove();
-        if (destinoMarker) destinoMarker.remove();
-        if (map.getSource('route')) {
-          map.removeLayer('route');
-          map.removeSource('route');
-        }
-        origenCoords = coords;
-        destinoCoords = null;
-        cotizacionActual = null;
-        origenMarker = new mapboxgl.Marker({ color: '#10b981' }).setLngLat([coords.lng, coords.lat]).addTo(map);
-        document.getElementById('instruccion-texto').innerText = "🏁 Ahora tocá el mapa para marcar el DESTINO";
-        resetResumen();
-      }
+    // Intento de obtener geolocalización actual del usuario
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(pos => {
+        map.flyTo({ center: [pos.coords.longitude, pos.coords.latitude], zoom: 14 });
+      });
+    }
+
+    // Buscador de Origen
+    const geocoderOrigen = new MapboxGeocoder({
+      accessToken: mapboxgl.accessToken,
+      mapboxgl: mapboxgl,
+      placeholder: '¿Dónde te buscamos?',
+      language: 'es'
     });
 
-    function seleccionarTipo(tipo, elemento) {
-      tipoVehiculo = tipo;
-      document.querySelectorAll('.tarjeta-vehiculo').forEach(el => el.classList.remove('seleccionado'));
-      elemento.classList.add('seleccionado');
+    // Buscador de Destino
+    const geocoderDestino = new MapboxGeocoder({
+      accessToken: mapboxgl.accessToken,
+      mapboxgl: mapboxgl,
+      placeholder: '¿A dónde vas?',
+      language: 'es'
+    });
+
+    document.getElementById('geocoder-origen').appendChild(geocoderOrigen.onAdd(map));
+    document.getElementById('geocoder-destino').appendChild(geocoderDestino.onAdd(map));
+
+    // Eventos al seleccionar Origen
+    geocoderOrigen.on('result', (e) => {
+      origenCoords = e.result.center; // [lng, lat]
+      origenTexto = e.result.place_name;
+      markerOrigen.setLngLat(origenCoords).addTo(map);
+      calcularYMostrarRuta();
+    });
+
+    // Eventos al seleccionar Destino
+    geocoderDestino.on('result', (e) => {
+      destinoCoords = e.result.center; // [lng, lat]
+      destinoTexto = e.result.place_name;
+      markerDestino.setLngLat(destinoCoords).addTo(map);
+      calcularYMostrarRuta();
+    });
+
+    function seleccionarVehiculo(tipo, elem) {
+      document.querySelectorAll('.btn-vehiculo').forEach(b => b.classList.remove('active'));
+      elem.classList.add('active');
+      tipoVehiculoSeleccionado = tipo;
       if (origenCoords && destinoCoords) {
-        cotizarRuta();
+        calcularYMostrarRuta();
       }
     }
 
-    async function cotizarRuta() {
+    // Función para pedir cotización al Backend y dibujar la ruta
+    async function calcularYMostrarRuta() {
+      if (!origenCoords || !destinoCoords) return;
+
+      const payload = {
+        origen: { lng: origenCoords[0], lat: origenCoords[1] },
+        destino: { lng: destinoCoords[0], lat: destinoCoords[1] },
+        tipoVehiculo: tipoVehiculoSeleccionado
+      };
+
       try {
-        const respuesta = await fetch('/api/cotizar', {
+        const response = await fetch('/api/cotizar', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            origen: origenCoords,
-            destino: destinoCoords,
-            tipoVehiculo
-          })
+          body: JSON.stringify(payload)
         });
 
-        const data = await respuesta.json();
+        const data = await response.json();
 
         if (data.exito) {
           cotizacionActual = data;
-          document.getElementById('val-distancia').innerText = `${data.distanciaKm} km`;
-          document.getElementById('val-tiempo').innerText = `${data.duracionMin} min`;
-          document.getElementById('val-precio').innerText = `$${data.precioEstimado}`;
-          
-          const btn = document.getElementById('btn-pedir');
-          btn.disabled = false;
-          btn.innerText = `Pedir Goru (${tipoVehiculo})`;
 
-          dibujarRuta(data.geometriaRuta);
-          document.getElementById('instruccion-texto').innerText = "Listo para solicitar tu viaje";
+          // Actualizar UI con precio, distancia y tiempo
+          document.getElementById('distancia').innerText = `${data.distanciaKm} km`;
+          document.getElementById('tiempo').innerText = `${data.duracionMin} min`;
+          document.getElementById('precio').innerText = `$${data.precioEstimado}`;
+
+          const btn = document.getElementById('btnSolicitar');
+          btn.disabled = false;
+          btn.innerText = `Confirmar Pedido ($${data.precioEstimado})`;
+
+          // Dibujar la ruta en el mapa
+          if (map.getSource('route')) {
+            map.getSource('route').setData({
+              'type': 'Feature',
+              'properties': {},
+              'geometry': data.geometriaRuta
+            });
+          } else {
+            map.addSource('route', {
+              'type': 'geojson',
+              'data': {
+                'type': 'Feature',
+                'properties': {},
+                'geometry': data.geometriaRuta
+              }
+            });
+
+            map.addLayer({
+              'id': 'route',
+              'type': 'line',
+              'source': 'route',
+              'layout': { 'line-join': 'round', 'line-cap': 'round' },
+              'paint': { 'line-color': '#00e676', 'line-width': 5, 'line-opacity': 0.8 }
+            });
+          }
+
+          // Ajustar zoom para ver ambos puntos
+          const bounds = new mapboxgl.LngLatBounds();
+          bounds.extend(origenCoords);
+          bounds.extend(destinoCoords);
+          map.fitBounds(bounds, { padding: 60 });
+
         } else {
-          alert('Error al calcular la ruta: ' + data.error);
+          alert("Error cotizando ruta: " + data.error);
         }
       } catch (err) {
-        alert('Error de conexión con el servidor.');
+        console.error("Error al cotizar:", err);
       }
     }
 
-    function dibujarRuta(geometria) {
-      if (map.getSource('route')) {
-        map.getSource('route').setData({
-          'type': 'Feature',
-          'properties': {},
-          'geometry': geometria
-        });
-      } else {
-        map.addSource('route', {
-          'type': 'geojson',
-          'data': {
-            'type': 'Feature',
-            'properties': {},
-            'geometry': geometria
-          }
-        });
-        map.addLayer({
-          'id': 'route',
-          'type': 'line',
-          'source': 'route',
-          'layout': { 'line-join': 'round', 'line-cap': 'round' },
-          'paint': { 'line-color': '#10b981', 'line-width': 5 }
-        });
-      }
-    }
+    // Solicitar el viaje al Backend
+    async function solicitarViaje() {
+      if (!cotizacionActual || !origenCoords || !destinoCoords) return;
 
-    function resetResumen() {
-      document.getElementById('val-distancia').innerText = "0.0 km";
-      document.getElementById('val-tiempo').innerText = "0 min";
-      document.getElementById('val-precio').innerText = "$0";
-      const btn = document.getElementById('btn-pedir');
+      const btn = document.getElementById('btnSolicitar');
       btn.disabled = true;
-      btn.innerText = "Elegí origen y destino";
-    }
+      btn.innerText = 'Buscando chofer cercano...';
 
-    async function confirmarViaje() {
-      if (!cotizacionActual) return;
-
-      const btn = document.getElementById('btn-pedir');
-      btn.disabled = true;
-      btn.innerText = "Enviando solicitud...";
+      const pedido = {
+        pasajeroId: "pasajero_demo_1",
+        origen: { direccion: origenTexto, lat: origenCoords[1], lng: origenCoords[0] },
+        destino: { direccion: destinoTexto, lat: destinoCoords[1], lng: destinoCoords[0] },
+        tipoVehiculo: tipoVehiculoSeleccionado,
+        distanciaKm: cotizacionActual.distanciaKm,
+        duracionMin: cotizacionActual.duracionMin,
+        precioEstimado: cotizacionActual.precioEstimado
+      };
 
       try {
-        const respuesta = await fetch('/api/viajes/solicitar', {
+        const response = await fetch('/api/viajes/solicitar', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            pasajeroId: "66bc3a29e1f0610012345678", // ID de usuario de prueba
-            origen: { direccion: "Punto de Origen", lat: origenCoords.lat, lng: origenCoords.lng },
-            destino: { direccion: "Punto de Destino", lat: destinoCoords.lat, lng: destinoCoords.lng },
-            tipoVehiculo,
-            distanciaKm: cotizacionActual.distanciaKm,
-            duracionMin: cotizacionActual.duracionMin,
-            precioEstimado: cotizacionActual.precioEstimado
-          })
+          body: JSON.stringify(pedido)
         });
 
-        const resData = await respuesta.json();
+        const data = await response.json();
 
-        if (resData.exito) {
-          alert('🎉 ¡Viaje solicitado con éxito! Guardado en la base de datos.');
-          btn.innerText = "Buscando chofer asignado...";
+        if (data.exito) {
+          alert('🚀 ¡Viaje solicitado con éxito! Un chofer asignado lo verá en su pantalla.');
         } else {
-          alert('Error al solicitar viaje: ' + resData.error);
+          alert('Hubo un error al solicitar el viaje.');
           btn.disabled = false;
         }
-      } catch (error) {
-        alert('Error al conectar con la API.');
+      } catch (err) {
+        alert('Error de conexión al solicitar viaje.');
         btn.disabled = false;
       }
     }
   </script>
+
 </body>
 </html>
