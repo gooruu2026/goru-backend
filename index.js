@@ -1,154 +1,104 @@
 const express = require('express');
-const axios = require('axios');
 const mongoose = require('mongoose');
-
-// Importar los modelos de la base de datos
-const User = require('./models/User');
-const Ride = require('./models/Ride');
-const Wallet = require('./models/Wallet');
+const cors = require('cors');
+const path = require('path');
+const axios = require('axios');
 
 const app = express();
+
+// Middlewares
+app.use(cors());
 app.use(express.json());
+app.use(express.static(path.join(__dirname, 'public')));
 
-// Servir la interfaz gráfica (Frontend) desde la carpeta 'public'
-app.use(express.static('public'));
-
-const PORT = process.env.PORT || 3000;
-const MAPBOX_TOKEN = process.env.MAPBOX_ACCESS_TOKEN || 'pk.eyJ1IjoiZ29ydTIwMjYiLCJhIjoiY211Ym94emIzMGlnODQ4c2JrNnFyZG40OCJ9.au_s_1ynUiNDfNP7axIlyg';
-const MONGO_URI = process.env.MONGO_URI;
+// Token de Mapbox predeterminado
+const MAPBOX_TOKEN = process.env.MAPBOX_TOKEN || 'pk.eyJ1IjoiZ29ydTIwMjYiLCJhIjoiY211Ym94emIzMGlnODQ4c2JrNnFyZG40OCJ9.au_s_1ynUiNDfNP7axIlyg';
 
 // Conexión a MongoDB Atlas
-if (MONGO_URI) {
-  mongoose.connect(MONGO_URI)
-    .then(() => console.log('✅ Conectado exitosamente a MongoDB Atlas'))
-    .catch((err) => console.error('❌ Error al conectar a MongoDB:', err));
-} else {
-  console.log('⚠️ No se proporcionó MONGO_URI en las variables de entorno.');
-}
+const MONGO_URI = process.env.MONGO_URI || "mongodb+srv://admin:goru2026@goru-cluster.mongodb.net/goru_db?retryWrites=true&w0=majority";
 
-// Ruta principal de prueba o salud de la API
-app.get('/api/health', (req, res) => {
-  res.json({
-    mensaje: "¡Bienvenido a la API de Goru!",
-    estado: "Servidor activo",
-    baseDeDatos: mongoose.connection.readyState === 1 ? "Conectada" : "Desconectada"
-  });
+mongoose.connect(MONGO_URI)
+  .then(() => console.log('✅ Conectado exitosamente a MongoDB Atlas'))
+  .catch((err) => console.error('❌ Error al conectar con MongoDB:', err.message));
+
+// Esquema de Viajes
+const rideSchema = new mongoose.Schema({
+  pasajeroId: String,
+  choferId: String,
+  origen: { direccion: String, lat: Number, lng: Number },
+  destino: { direccion: String, lat: Number, lng: Number },
+  tipoVehiculo: { type: String, enum: ['Auto', 'Moto', 'Flete'], default: 'Auto' },
+  distanciaKm: Number,
+  duracionMin: Number,
+  precioEstimado: Number,
+  comisionPlataforma: Number,
+  estado: { type: String, enum: ['solicitado', 'aceptado', 'en_camino', 'finalizado', 'cancelado'], default: 'solicitado' },
+  fechaCreacion: { type: Date, default: Date.now }
 });
 
-// ==========================================
-// RUTAS DE USUARIOS Y CHOFERES
-// ==========================================
+const Ride = mongoose.model('Ride', rideSchema);
 
-// 1. Registro de Usuario (Pasajero o Chofer)
-app.post('/api/usuarios/registro', async (req, res) => {
+// RUTAS DE LA API
+
+// 1. Cotizar Ruta con Mapbox
+app.post('/api/cotizar', async (req, res) => {
   try {
-    const { nombre, email, telefono, rol, datosChofer } = req.body;
+    const { origen, destino, tipoVehiculo } = req.body;
 
-    if (!nombre || !email || !telefono) {
-      return res.status(400).json({ error: "Nombre, email y teléfono son obligatorios." });
+    if (!origen || !destino) {
+      return res.status(400).json({ exito: false, error: 'Faltan coordenadas de origen o destino' });
     }
 
-    const usuarioExistente = await User.findOne({ $or: [{ email }, { telefono }] });
-    if (usuarioExistente) {
-      return res.status(400).json({ error: "El email o teléfono ya se encuentra registrado." });
+    // Consulta de ruta a Mapbox Directions API
+    const urlMapbox = `https://api.mapbox.com/directions/v5/mapbox/driving/${origen.lng},${origen.lat};${destino.lng},${destino.lat}?geometries=geojson&access_token=${MAPBOX_TOKEN}`;
+    
+    const respuestaMapbox = await axios.get(urlMapbox);
+    const dataRuta = respuestaMapbox.data.routes[0];
+
+    if (!dataRuta) {
+      return res.status(404).json({ exito: false, error: 'No se encontró una ruta válida' });
     }
 
-    const nuevoUsuario = new User({
-      nombre,
-      email,
-      telefono,
-      rol: rol || 'pasajero',
-      datosChofer: rol === 'chofer' ? datosChofer : undefined
-    });
+    const distanciaKm = parseFloat((dataRuta.distance / 1000).toFixed(2));
+    const duracionMin = Math.round(dataRuta.duration / 60);
 
-    await nuevoUsuario.save();
+    // Tarifas base según el tipo de vehículo
+    let tarifaBase = 500;
+    let precioKm = 350;
 
-    if (nuevoUsuario.rol === 'chofer') {
-      const nuevaBilletera = new Wallet({ chofer: nuevoUsuario._id, saldo: 0 });
-      await nuevaBilletera.save();
+    if (tipoVehiculo === 'Moto') {
+      tarifaBase = 350;
+      precioKm = 250;
+    } else if (tipoVehiculo === 'Flete') {
+      tarifaBase = 1200;
+      precioKm = 600;
     }
 
-    res.status(201).json({
-      exito: true,
-      mensaje: "Usuario registrado correctamente",
-      usuario: nuevoUsuario
-    });
-
-  } catch (error) {
-    res.status(500).json({ error: "Error al registrar usuario", detalle: error.message });
-  }
-});
-
-// 2. Login / Consulta por Teléfono
-app.post('/api/usuarios/login', async (req, res) => {
-  try {
-    const { telefono } = req.body;
-
-    if (!telefono) {
-      return res.status(400).json({ error: "El número de teléfono es obligatorio." });
-    }
-
-    const usuario = await User.findOne({ telefono });
-    if (!usuario) {
-      return res.status(404).json({ error: "Usuario no encontrado." });
-    }
+    const precioEstimado = Math.round(tarifaBase + (distanciaKm * precioKm));
 
     res.json({
       exito: true,
-      usuario
+      distanciaKm,
+      duracionMin,
+      precioEstimado,
+      geometriaRuta: dataRuta.geometry
     });
 
   } catch (error) {
-    res.status(500).json({ error: "Error al iniciar sesión", detalle: error.message });
+    console.error("Error en cotización Mapbox:", error.message);
+    res.status(500).json({ exito: false, error: 'Error al consultar Mapbox' });
   }
 });
 
-// 3. Cambiar disponibilidad del Chofer
-app.put('/api/usuarios/chofer/disponibilidad', async (req, res) => {
-  try {
-    const { choferId, activo, ubicacionActual } = req.body;
-
-    const chofer = await User.findById(choferId);
-    if (!chofer || chofer.rol !== 'chofer') {
-      return res.status(404).json({ error: "Chofer no encontrado." });
-    }
-
-    chofer.datosChofer.activo = activo;
-    if (ubicacionActual) {
-      chofer.datosChofer.ubicacionActual = ubicacionActual;
-    }
-
-    await chofer.save();
-
-    res.json({
-      exito: true,
-      mensaje: `Chofer ahora está ${activo ? 'Disponible' : 'Fuera de servicio'}`,
-      chofer
-    });
-
-  } catch (error) {
-    res.status(500).json({ error: "Error al actualizar disponibilidad", detalle: error.message });
-  }
-});
-
-// ==========================================
-// RUTAS DE VIAJES Y ENVÍOS
-// ==========================================
-
-// 1. Solicitar un viaje
+// 2. Solicitar Viaje
 app.post('/api/viajes/solicitar', async (req, res) => {
   try {
-    const { pasajeroId, origen, destino, tipoVehiculo, precioEstimado, distanciaKm, duracionMin } = req.body;
+    const { pasajeroId, origen, destino, tipoVehiculo, distanciaKm, duracionMin, precioEstimado } = req.body;
 
-    if (!pasajeroId || !origen || !destino || !tipoVehiculo || !precioEstimado) {
-      return res.status(400).json({ error: "Faltan parámetros requeridos para solicitar el viaje." });
-    }
-
-    const porcentajeComision = 0.10;
-    const comisionPlataforma = Math.round(precioEstimado * porcentajeComision);
+    const comisionPlataforma = Math.round(precioEstimado * 0.10); // 10% comisión
 
     const nuevoViaje = new Ride({
-      pasajero: pasajeroId,
+      pasajeroId,
       origen,
       destino,
       tipoVehiculo,
@@ -161,153 +111,42 @@ app.post('/api/viajes/solicitar', async (req, res) => {
 
     await nuevoViaje.save();
 
-    res.status(201).json({
-      exito: true,
-      mensaje: "Viaje solicitado con éxito. Buscando choferes...",
-      viaje: nuevoViaje
-    });
-
+    res.json({ exito: true, mensaje: 'Viaje solicitado correctamente', viaje: nuevoViaje });
   } catch (error) {
-    res.status(500).json({ error: "Error al crear la solicitud de viaje", detalle: error.message });
+    res.status(500).json({ exito: false, error: 'Error al solicitar el viaje' });
   }
 });
 
-// 2. Obtener viajes pendientes de aceptación (para choferes)
+// 3. Obtener viajes pendientes (Para choferes)
 app.get('/api/viajes/pendientes', async (req, res) => {
   try {
-    const viajesPendientes = await Ride.find({ estado: 'solicitado' }).populate('pasajero', 'nombre telefono');
-    res.json({
-      exito: true,
-      cantidad: viajesPendientes.length,
-      viajes: viajesPendientes
-    });
+    const viajesPendientes = await Ride.find({ estado: 'solicitado' }).sort({ fechaCreacion: -1 });
+    res.json({ exito: true, viajes: viajesPendientes });
   } catch (error) {
-    res.status(500).json({ error: "Error al consultar viajes pendientes", detalle: error.message });
+    res.status(500).json({ exito: false, error: 'Error al obtener viajes' });
   }
 });
 
-// 3. Aceptar un viaje (por parte del Chofer)
+// 4. Aceptar Viaje
 app.put('/api/viajes/aceptar', async (req, res) => {
   try {
     const { viajeId, choferId } = req.body;
 
     const viaje = await Ride.findById(viajeId);
-    if (!viaje) {
-      return res.status(404).json({ error: "Viaje no encontrado." });
-    }
+    if (!viaje) return res.status(404).json({ exito: false, error: 'Viaje no encontrado' });
 
-    if (viaje.estado !== 'solicitado') {
-      return res.status(400).json({ error: "El viaje ya fue aceptado o cancelado por otro chofer." });
-    }
-
-    viaje.chofer = choferId;
+    viaje.choferId = choferId;
     viaje.estado = 'aceptado';
     await viaje.save();
 
-    res.json({
-      exito: true,
-      mensaje: "Viaje aceptado correctamente",
-      viaje
-    });
-
+    res.json({ exito: true, mensaje: 'Viaje aceptado con éxito', viaje });
   } catch (error) {
-    res.status(500).json({ error: "Error al aceptar el viaje", detalle: error.message });
+    res.status(500).json({ exito: false, error: 'Error al aceptar el viaje' });
   }
 });
 
-// 4. Finalizar viaje y descontar comisión de la billetera
-app.put('/api/viajes/finalizar', async (req, res) => {
-  try {
-    const { viajeId } = req.body;
-
-    const viaje = await Ride.findById(viajeId);
-    if (!viaje) {
-      return res.status(404).json({ error: "Viaje no encontrado." });
-    }
-
-    if (viaje.estado === 'finalizado') {
-      return res.status(400).json({ error: "El viaje ya se encuentra finalizado." });
-    }
-
-    viaje.estado = 'finalizado';
-    await viaje.save();
-
-    if (viaje.chofer && viaje.metodoPago === 'efectivo') {
-      const billetera = await Wallet.findOne({ chofer: viaje.chofer });
-      if (billetera) {
-        billetera.saldo -= viaje.comisionPlataforma;
-        billetera.historialMovimientos.push({
-          tipo: 'comision_descuento',
-          monto: viaje.comisionPlataforma,
-          descripcion: `Descuento por comisión del viaje ID: ${viaje._id}`
-        });
-        await billetera.save();
-      }
-    }
-
-    res.json({
-      exito: true,
-      mensaje: "Viaje finalizado con éxito.",
-      viaje
-    });
-
-  } catch (error) {
-    res.status(500).json({ error: "Error al finalizar el viaje", detalle: error.message });
-  }
-});
-
-// ==========================================
-// RUTA DE COTIZACIÓN (MAPBOX)
-// ==========================================
-app.post('/api/cotizar', async (req, res) => {
-  try {
-    const { origen, destino, tipoVehiculo } = req.body;
-
-    if (!origen || !destino || !tipoVehiculo) {
-      return res.status(400).json({ error: "Faltan datos obligatorios (origen, destino, tipoVehiculo)" });
-    }
-
-    const urlMapbox = `https://api.mapbox.com/directions/v5/mapbox/driving/${origen.lng},${origen.lat};${destino.lng},${destino.lat}?geometries=geojson&access_token=${MAPBOX_TOKEN}`;
-    const respuesta = await axios.get(urlMapbox);
-
-    if (!respuesta.data.routes || respuesta.data.routes.length === 0) {
-      return res.status(404).json({ error: "No se encontró una ruta válida." });
-    }
-
-    const ruta = respuesta.data.routes[0];
-    const distanciaKm = (ruta.distance / 1000).toFixed(2);
-    const duracionMin = Math.round(ruta.duration / 60);
-
-    let bajadaBandera = 500;
-    let precioPorKm = 300;
-
-    if (tipoVehiculo === 'Moto') {
-      bajadaBandera = 300;
-      precioPorKm = 200;
-    } else if (tipoVehiculo === 'Flete') {
-      bajadaBandera = 1500;
-      precioPorKm = 600;
-    }
-
-    const precioEstimado = Math.round(bajadaBandera + (distanciaKm * precioPorKm));
-
-    res.json({
-      exito: true,
-      tipoVehiculo,
-      distanciaKm: parseFloat(distanciaKm),
-      duracionMin,
-      precioEstimado,
-      geometriaRuta: ruta.geometry
-    });
-
-  } catch (error) {
-    res.status(500).json({
-      error: "Error al consultar Mapbox",
-      detalle: error.response ? error.response.data.message || error.response.data : error.message
-    });
-  }
-});
-
+// Servidor escuchando
+const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`Servidor Goru corriendo en puerto ${PORT}`);
+  console.log(`🚀 Servidor ejecutándose en el puerto ${PORT}`);
 });
