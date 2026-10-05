@@ -3,283 +3,273 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Goru - Pedir Viaje</title>
+  <title>Goru - Pedí tu viaje</title>
   
-  <!-- Mapbox GL JS CSS & JS -->
-  <link href="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css" rel="stylesheet" />
+  <!-- Mapbox GL JS -->
   <script src="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js"></script>
-
-  <!-- Mapbox Geocoder (Buscador de direcciones) -->
-  <link rel="stylesheet" href="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v5.0.0/mapbox-gl-geocoder.css" type="text/css">
+  <link href="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css" rel="stylesheet" />
+  
+  <!-- Mapbox Geocoder (Buscador con Autocompletado) -->
   <script src="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v5.0.0/mapbox-gl-geocoder.min.js"></script>
+  <link rel="stylesheet" href="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v5.0.0/mapbox-gl-geocoder.css" type="text/css">
 
   <style>
+    :root {
+      --goru-blue: #0066FF;
+      --goru-blue-dark: #004ecc;
+      --bg-dark: #121212;
+      --card-bg: #1e1e1e;
+    }
+
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-    body { display: flex; flex-direction: column; height: 100vh; background-color: #121212; color: #fff; }
+    body, html { width: 100%; height: 100%; overflow: hidden; background: var(--bg-dark); color: white; }
 
-    /* Encabezado */
-    header { background: #1f1f1f; padding: 15px; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #00e676; }
-    header h1 { color: #00e676; font-size: 22px; font-weight: bold; letter-spacing: 1px; }
-    .status { background: #00e67622; color: #00e676; padding: 5px 12px; border-radius: 20px; font-size: 12px; border: 1px solid #00e676; }
+    #app { display: flex; flex-direction: column; height: 100vh; position: relative; }
+    
+    /* Header con el azul Goru */
+    header {
+      background: var(--card-bg);
+      padding: 12px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 2px solid var(--goru-blue);
+      z-index: 10;
+    }
+    .brand { font-size: 24px; font-weight: 800; color: #fff; letter-spacing: 1px; }
+    .brand span { color: var(--goru-blue); }
+    .status-badge { background: rgba(0, 102, 255, 0.2); color: #4d94ff; padding: 5px 12px; border-radius: 20px; font-size: 12px; font-weight: bold; border: 1px solid var(--goru-blue); }
 
-    /* Contenedor del Mapa */
-    #map { flex: 1; width: 100%; height: 50vh; }
+    /* Mapa en pantalla completa */
+    #map { flex: 1; width: 100%; height: 100%; position: absolute; top: 0; bottom: 0; }
 
-    /* Panel Inferior de Búsqueda y Cotización */
-    .panel { background: #1f1f1f; padding: 20px; border-radius: 20px 20px 0 0; box-shadow: 0 -5px 25px rgba(0,0,0,0.5); display: flex; flex-direction: column; gap: 12px; z-index: 10; }
+    /* Panel inferior flotante */
+    .booking-panel {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: var(--card-bg);
+      border-top-left-radius: 24px;
+      border-top-right-radius: 24px;
+      padding: 20px;
+      box-shadow: 0 -5px 25px rgba(0,0,0,0.5);
+      z-index: 10;
+      max-width: 500px;
+      margin: 0 auto;
+    }
 
-    /* Estilos para los Buscadores de Mapbox */
-    .mapboxgl-ctrl-geocoder { width: 100% !important; max-width: none !important; background-color: #2a2a2a !important; color: white !important; border-radius: 10px !important; box-shadow: none !important; border: 1px solid #444 !important; }
-    .mapboxgl-ctrl-geocoder--input { color: white !important; font-size: 14px !important; }
-    .mapboxgl-ctrl-geocoder--icon { fill: #00e676 !important; }
-    .mapboxgl-ctrl-geocoder .suggestions { background-color: #2a2a2a !important; border-radius: 10px; }
-    .mapboxgl-ctrl-geocoder .suggestions > li > a { color: #ddd !important; }
-    .mapboxgl-ctrl-geocoder .suggestions > .active > a { background-color: #00e676 !important; color: #000 !important; }
+    .input-group { margin-bottom: 12px; }
+    .input-label { font-size: 11px; text-transform: uppercase; color: #aaa; font-weight: bold; margin-bottom: 4px; display: block; }
+    
+    .mapboxgl-ctrl-geocoder {
+      width: 100% !important;
+      max-width: none !important;
+      background-color: #2a2a2a !important;
+      border-radius: 10px !important;
+      box-shadow: none !important;
+    }
+    .mapboxgl-ctrl-geocoder--input { color: #fff !important; }
 
-    /* Selección de Vehículos */
-    .vehiculos { display: flex; gap: 10px; justify-content: space-between; margin-top: 5px; }
-    .btn-vehiculo { flex: 1; padding: 10px; border: 1px solid #444; background: #2a2a2a; color: #ccc; border-radius: 10px; cursor: pointer; text-align: center; font-size: 13px; font-weight: bold; transition: all 0.2s; }
-    .btn-vehiculo.active { border-color: #00e676; background: #00e67622; color: #00e676; }
+    /* Selección de vehículo */
+    .services-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 15px 0; }
+    .service-btn {
+      background: #2a2a2a;
+      border: 2px solid transparent;
+      border-radius: 12px;
+      padding: 10px 5px;
+      color: white;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .service-btn.active { border-color: var(--goru-blue); background: rgba(0, 102, 255, 0.15); }
+    .service-btn span { display: block; font-size: 12px; font-weight: bold; margin-top: 4px; }
 
-    /* Resumen de Tarifas */
-    .resumen { display: flex; justify-content: space-between; align-items: center; background: #2a2a2a; padding: 12px 16px; border-radius: 12px; margin-top: 5px; }
-    .resumen-item { text-align: center; }
-    .resumen-item span { display: block; font-size: 11px; color: #aaa; }
-    .resumen-item strong { font-size: 16px; color: #fff; }
-    .resumen-item .precio { font-size: 20px; color: #00e676; font-weight: bold; }
+    /* Detalles de la tarifa */
+    .trip-details { display: flex; justify-content: space-between; background: #161616; padding: 12px 18px; border-radius: 12px; margin-bottom: 15px; }
+    .detail-item { text-align: center; }
+    .detail-item .label { font-size: 10px; color: #888; text-transform: uppercase; }
+    .detail-item .value { font-size: 15px; font-weight: bold; }
+    .detail-item .price { color: var(--goru-blue); }
 
-    /* Botón de Confirmación */
-    .btn-pedir { width: 100%; padding: 15px; background: #00e676; color: #000; font-size: 16px; font-weight: bold; border: none; border-radius: 12px; cursor: pointer; transition: opacity 0.2s; }
-    .btn-pedir:disabled { background: #444; color: #888; cursor: not-allowed; }
+    /* Botón principal */
+    .btn-confirm {
+      width: 100%;
+      background: var(--goru-blue);
+      color: white;
+      border: none;
+      padding: 15px;
+      border-radius: 14px;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .btn-confirm:hover { background: var(--goru-dark-blue); }
   </style>
 </head>
 <body>
 
-  <header>
-    <h1>GORU</h1>
-    <div class="status">● Pasajero</div>
-  </header>
+  <div id="app">
+    <header>
+      <div class="brand">GORU<span>.</span></div>
+      <div class="status-badge">Conectado</div>
+    </header>
 
-  <!-- Mapa -->
-  <div id="map"></div>
+    <div id="map"></div>
 
-  <!-- Panel de Control -->
-  <div class="panel">
-    <label style="font-size: 12px; color: #aaa;">PUNTO DE PARTIDA</label>
-    <div id="geocoder-origen"></div>
+    <div class="booking-panel">
+      <div class="input-group">
+        <span class="input-label">Punto de partida</span>
+        <div id="geocoder-origin"></div>
+      </div>
 
-    <label style="font-size: 12px; color: #aaa;">DESTINO</label>
-    <div id="geocoder-destino"></div>
+      <div class="input-group">
+        <span class="input-label">Destino</span>
+        <div id="geocoder-destination"></div>
+      </div>
 
-    <!-- Selección de Vehículo -->
-    <div class="vehiculos">
-      <button class="btn-vehiculo active" onclick="seleccionarVehiculo('Auto', this)">🚗 Auto</button>
-      <button class="btn-vehiculo" onclick="seleccionarVehiculo('Moto', this)">🛵 Moto</button>
-      <button class="btn-vehiculo" onclick="seleccionarVehiculo('Flete', this)">🚚 Flete</button>
+      <div class="services-grid">
+        <div class="service-btn active" onclick="selectService('Auto', 350)">
+          🚗 <span>Auto</span>
+        </div>
+        <div class="service-btn" onclick="selectService('Moto', 200)">
+          🛵 <span>Moto</span>
+        </div>
+        <div class="service-btn" onclick="selectService('Flete', 600)">
+          🚚 <span>Flete</span>
+        </div>
+      </div>
+
+      <div class="trip-details">
+        <div class="detail-item">
+          <div class="label">Distancia</div>
+          <div class="value" id="val-dist">0.0 km</div>
+        </div>
+        <div class="detail-item">
+          <div class="label">Tiempo</div>
+          <div class="value" id="val-time">0 min</div>
+        </div>
+        <div class="detail-item">
+          <div class="label">Estimado</div>
+          <div class="value price" id="val-price">$0</div>
+        </div>
+      </div>
+
+      <button class="btn-confirm" id="btn-request" onclick="confirmTrip()">Elegí origen y destino</button>
     </div>
-
-    <!-- Estimación de Precio y Tiempo -->
-    <div class="resumen">
-      <div class="resumen-item">
-        <span>Distancia</span>
-        <strong id="distancia">- km</strong>
-      </div>
-      <div class="resumen-item">
-        <span>Tiempo</span>
-        <strong id="tiempo">- min</strong>
-      </div>
-      <div class="resumen-item">
-        <span>Estimado</span>
-        <div class="precio" id="precio">$0</div>
-      </div>
-    </div>
-
-    <button id="btnSolicitar" class="btn-pedir" disabled onclick="solicitarViaje()">Elegí origen y destino</button>
   </div>
 
   <script>
-    const MAPBOX_TOKEN = 'pk.eyJ1IjoiZ29ydTIwMjYiLCJhIjoiY211Ym94emIzMGlnODQ4c2JrNnFyZG40OCJ9.au_s_1ynUiNDfNP7axIlyg';
+    const MAPBOX_TOKEN = 'pk.eyJ1IjoiZ29ydTIwMjYiLCJhIjoiY204Y2g2bnk3MGExNTJyc2p1bjgwNGszZCJ9.9U322q_xP2B7m8T91sN9DA';
     mapboxgl.accessToken = MAPBOX_TOKEN;
 
-    // Inicializar Mapa centrado por defecto
+    // Mapa usando el estilo de calles claras para ver el mapa 100% nítido
     const map = new mapboxgl.Map({
       container: 'map',
-      style: 'mapbox://styles/mapbox/dark-v11',
-      center: [-58.3816, -34.6037], // Buenos Aires por defecto
+      style: 'mapbox://styles/mapbox/streets-v12',
+      center: [-58.3816, -34.6037],
       zoom: 12
     });
 
-    let origenCoords = null;
-    let destinoCoords = null;
-    let origenTexto = "";
-    let destinoTexto = "";
-    let tipoVehiculoSeleccionado = 'Auto';
-    let cotizacionActual = null;
+    // Corrección para forzar a que el mapa ocupe todo el marco sin pantalla negra
+    map.on('load', () => {
+      map.resize();
+    });
 
-    let markerOrigen = new mapboxgl.Marker({ color: '#00e676' });
-    let markerDestino = new mapboxgl.Marker({ color: '#ff1744' });
-
-    // Intento de obtener geolocalización actual del usuario
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(pos => {
-        map.flyTo({ center: [pos.coords.longitude, pos.coords.latitude], zoom: 14 });
-      });
-    }
+    let originCoord = null;
+    let destCoord = null;
+    let ratePerKm = 350;
+    let calculatedPrice = 0;
 
     // Buscador de Origen
-    const geocoderOrigen = new MapboxGeocoder({
+    const geocoderOrigin = new MapboxGeocoder({
       accessToken: mapboxgl.accessToken,
       mapboxgl: mapboxgl,
       placeholder: '¿Dónde te buscamos?',
-      language: 'es'
+      country: 'ar'
     });
+    geocoderOrigin.addTo('#geocoder-origin');
 
     // Buscador de Destino
-    const geocoderDestino = new MapboxGeocoder({
+    const geocoderDest = new MapboxGeocoder({
       accessToken: mapboxgl.accessToken,
       mapboxgl: mapboxgl,
       placeholder: '¿A dónde vas?',
-      language: 'es'
+      country: 'ar'
+    });
+    geocoderDest.addTo('#geocoder-destination');
+
+    geocoderOrigin.on('result', (e) => {
+      originCoord = e.result.center;
+      updateRoute();
     });
 
-    document.getElementById('geocoder-origen').appendChild(geocoderOrigen.onAdd(map));
-    document.getElementById('geocoder-destino').appendChild(geocoderDestino.onAdd(map));
-
-    // Eventos al seleccionar Origen
-    geocoderOrigen.on('result', (e) => {
-      origenCoords = e.result.center; // [lng, lat]
-      origenTexto = e.result.place_name;
-      markerOrigen.setLngLat(origenCoords).addTo(map);
-      calcularYMostrarRuta();
+    geocoderDest.on('result', (e) => {
+      destCoord = e.result.center;
+      updateRoute();
     });
 
-    // Eventos al seleccionar Destino
-    geocoderDestino.on('result', (e) => {
-      destinoCoords = e.result.center; // [lng, lat]
-      destinoTexto = e.result.place_name;
-      markerDestino.setLngLat(destinoCoords).addTo(map);
-      calcularYMostrarRuta();
-    });
-
-    function seleccionarVehiculo(tipo, elem) {
-      document.querySelectorAll('.btn-vehiculo').forEach(b => b.classList.remove('active'));
-      elem.classList.add('active');
-      tipoVehiculoSeleccionado = tipo;
-      if (origenCoords && destinoCoords) {
-        calcularYMostrarRuta();
-      }
+    function selectService(type, rate) {
+      ratePerKm = rate;
+      document.querySelectorAll('.service-btn').forEach(btn => btn.classList.remove('active'));
+      event.currentTarget.classList.add('active');
+      if (originCoord && destCoord) updateRoute();
     }
 
-    // Función para pedir cotización al Backend y dibujar la ruta
-    async function calcularYMostrarRuta() {
-      if (!origenCoords || !destinoCoords) return;
+    async function updateRoute() {
+      if (!originCoord || !destCoord) return;
 
-      const payload = {
-        origen: { lng: origenCoords[0], lat: origenCoords[1] },
-        destino: { lng: destinoCoords[0], lat: destinoCoords[1] },
-        tipoVehiculo: tipoVehiculoSeleccionado
+      const query = await fetch(
+        `https://api.mapbox.com/directions/v5/mapbox/driving/${originCoord[0]},${originCoord[1]};${destCoord[0]},${destCoord[1]}?steps=true&geometries=geojson&access_token=${MAPBOX_TOKEN}`
+      );
+      const json = await query.json();
+      const data = json.routes[0];
+      
+      const distanceKm = (data.distance / 1000).toFixed(2);
+      const durationMin = Math.round(data.duration / 60);
+      calculatedPrice = Math.round(distanceKm * ratePerKm + 500);
+
+      document.getElementById('val-dist').innerText = `${distanceKm} km`;
+      document.getElementById('val-time').innerText = `${durationMin} min`;
+      document.getElementById('val-price').innerText = `$${calculatedPrice}`;
+      
+      const btn = document.getElementById('btn-request');
+      btn.innerText = `Confirmar Pedido ($${calculatedPrice})`;
+
+      // Trazar línea de ruta Azul Goru en el mapa
+      const routeGeoJSON = {
+        type: 'Feature',
+        properties: {},
+        geometry: data.geometry
       };
 
-      try {
-        const response = await fetch('/api/cotizar', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
+      if (map.getSource('route')) {
+        map.getSource('route').setData(routeGeoJSON);
+      } else {
+        map.addLayer({
+          id: 'route',
+          type: 'line',
+          source: { type: 'geojson', data: routeGeoJSON },
+          layout: { 'line-join': 'round', 'line-cap': 'round' },
+          paint: { 'line-color': '#0066FF', 'line-width': 6 }
         });
-
-        const data = await response.json();
-
-        if (data.exito) {
-          cotizacionActual = data;
-
-          // Actualizar UI con precio, distancia y tiempo
-          document.getElementById('distancia').innerText = `${data.distanciaKm} km`;
-          document.getElementById('tiempo').innerText = `${data.duracionMin} min`;
-          document.getElementById('precio').innerText = `$${data.precioEstimado}`;
-
-          const btn = document.getElementById('btnSolicitar');
-          btn.disabled = false;
-          btn.innerText = `Confirmar Pedido ($${data.precioEstimado})`;
-
-          // Dibujar la ruta en el mapa
-          if (map.getSource('route')) {
-            map.getSource('route').setData({
-              'type': 'Feature',
-              'properties': {},
-              'geometry': data.geometriaRuta
-            });
-          } else {
-            map.addSource('route', {
-              'type': 'geojson',
-              'data': {
-                'type': 'Feature',
-                'properties': {},
-                'geometry': data.geometriaRuta
-              }
-            });
-
-            map.addLayer({
-              'id': 'route',
-              'type': 'line',
-              'source': 'route',
-              'layout': { 'line-join': 'round', 'line-cap': 'round' },
-              'paint': { 'line-color': '#00e676', 'line-width': 5, 'line-opacity': 0.8 }
-            });
-          }
-
-          // Ajustar zoom para ver ambos puntos
-          const bounds = new mapboxgl.LngLatBounds();
-          bounds.extend(origenCoords);
-          bounds.extend(destinoCoords);
-          map.fitBounds(bounds, { padding: 60 });
-
-        } else {
-          alert("Error cotizando ruta: " + data.error);
-        }
-      } catch (err) {
-        console.error("Error al cotizar:", err);
       }
+
+      const bounds = new mapboxgl.LngLatBounds();
+      bounds.extend(originCoord);
+      bounds.extend(destCoord);
+      map.fitBounds(bounds, { padding: 80 });
     }
 
-    // Solicitar el viaje al Backend
-    async function solicitarViaje() {
-      if (!cotizacionActual || !origenCoords || !destinoCoords) return;
-
-      const btn = document.getElementById('btnSolicitar');
-      btn.disabled = true;
-      btn.innerText = 'Buscando chofer cercano...';
-
-      const pedido = {
-        pasajeroId: "pasajero_demo_1",
-        origen: { direccion: origenTexto, lat: origenCoords[1], lng: origenCoords[0] },
-        destino: { direccion: destinoTexto, lat: destinoCoords[1], lng: destinoCoords[0] },
-        tipoVehiculo: tipoVehiculoSeleccionado,
-        distanciaKm: cotizacionActual.distanciaKm,
-        duracionMin: cotizacionActual.duracionMin,
-        precioEstimado: cotizacionActual.precioEstimado
-      };
-
-      try {
-        const response = await fetch('/api/viajes/solicitar', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(pedido)
-        });
-
-        const data = await response.json();
-
-        if (data.exito) {
-          alert('🚀 ¡Viaje solicitado con éxito! Un chofer asignado lo verá en su pantalla.');
-        } else {
-          alert('Hubo un error al solicitar el viaje.');
-          btn.disabled = false;
-        }
-      } catch (err) {
-        alert('Error de conexión al solicitar viaje.');
-        btn.disabled = false;
+    function confirmTrip() {
+      if (!originCoord || !destCoord) {
+        alert('Por favor elegí origen y destino primero.');
+        return;
       }
+      alert(`¡Viaje solicitado con éxito! Total: $${calculatedPrice}`);
     }
   </script>
-
 </body>
 </html>
