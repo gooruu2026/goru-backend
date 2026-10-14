@@ -3,300 +3,389 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Gorú - Tu viaje al instante</title>
+  <title>Gorú - Clon Uber</title>
   
-  <!-- Mapbox GL JS -->
-  <script src="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js"></script>
-  <link href="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css" rel="stylesheet" />
-  
-  <!-- Mapbox Geocoder -->
-  <script src="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v5.0.0/mapbox-gl-geocoder.min.js"></script>
-  <link rel="stylesheet" href="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v5.0.0/mapbox-gl-geocoder.css" type="text/css">
+  <!-- Leaflet CSS & JS (Mapa estable sin tokens) -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
   <style>
     :root {
       --goru-blue: #0066FF;
-      --goru-blue-dark: #004ECC;
-      --bg-gray: #F8FAFC;
-      --text-main: #0F172A;
-      --text-sub: #64748B;
+      --goru-blue-hover: #0052CC;
+      --bg-gray: #F3F4F6;
+      --text-dark: #0F172A;
+      --text-muted: #64748B;
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-    html, body { width: 100%; height: 100%; overflow: hidden; background-color: var(--bg-gray); color: var(--text-main); }
+    html, body { width: 100%; height: 100%; overflow: hidden; background: #FFFFFF; color: var(--text-dark); }
 
     #app { display: flex; flex-direction: column; width: 100%; height: 100vh; position: relative; }
-    
-    /* Header Superior con Logo Limpio y Grande */
+
+    /* Cabecera limpia con el Logo MÁS GRANDE */
     header {
       background: #FFFFFF;
-      padding: 10px 16px;
+      height: 70px;
+      padding: 0 20px;
       display: flex;
       justify-content: space-between;
       align-items: center;
-      box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
-      z-index: 20;
-      height: 64px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+      z-index: 1000;
+      position: relative;
     }
 
-    .brand-container { display: flex; align-items: center; }
-    .brand-logo { height: 44px; width: auto; object-fit: contain; }
+    .brand-logo { height: 54px; width: auto; object-fit: contain; }
 
-    .status-badge { 
-      background: rgba(0, 102, 255, 0.08); 
-      color: var(--goru-blue); 
-      padding: 6px 14px; 
-      border-radius: 20px; 
-      font-size: 13px; 
-      font-weight: 700; 
+    .status-badge {
+      background: rgba(0, 102, 255, 0.08);
+      color: var(--goru-blue);
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: 700;
       display: flex;
       align-items: center;
       gap: 6px;
     }
     .status-dot { width: 8px; height: 8px; background: #10B981; border-radius: 50%; }
 
-    /* Mapa con altura fija garantizada para que no se ponga en blanco */
-    #map-wrapper { width: 100%; height: 50vh; position: relative; z-index: 1; }
-    #map { width: 100%; height: 100%; }
+    /* Contenedor del Mapa */
+    #map { flex: 1; width: 100%; z-index: 1; }
 
-    /* Panel Flotante Estilo Uber / DiDi */
-    .booking-panel {
-      flex: 1;
+    /* Panel Flotante Inferior Estilo Uber (Clon Exacto) */
+    .uber-sheet {
       background: #FFFFFF;
       border-top-left-radius: 24px;
       border-top-right-radius: 24px;
-      padding: 16px 20px;
-      box-shadow: 0 -8px 30px rgba(0, 0, 0, 0.1);
-      z-index: 10;
+      padding: 20px 20px 30px 20px;
+      box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.12);
+      z-index: 1000;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      max-height: 55vh;
       overflow-y: auto;
     }
 
-    .input-group { margin-bottom: 8px; }
-    .input-label { font-size: 11px; text-transform: uppercase; color: var(--text-sub); font-weight: 800; margin-bottom: 2px; display: block; }
-    
-    .mapboxgl-ctrl-geocoder {
-      width: 100% !important;
-      max-width: none !important;
-      background-color: #F1F5F9 !important;
-      border-radius: 12px !important;
-      box-shadow: none !important;
-      border: 1px solid #E2E8F0 !important;
+    .sheet-handle {
+      width: 40px;
+      height: 5px;
+      background: #E2E8F0;
+      border-radius: 10px;
+      margin: 0 auto 6px auto;
     }
-    .mapboxgl-ctrl-geocoder--input { color: var(--text-main) !important; font-size: 14px !important; }
 
-    /* Selección de Vehículo */
-    .services-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 10px 0; }
+    /* Campos de Búsqueda estilo Uber con conectores de puntos */
+    .search-container {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      position: relative;
+      background: #F8FAFC;
+      padding: 12px;
+      border-radius: 16px;
+      border: 1px solid #E2E8F0;
+    }
+
+    .input-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      position: relative;
+    }
+
+    .dot-origin { width: 10px; height: 10px; background: #10B981; border-radius: 50%; flex-shrink: 0; }
+    .dot-dest { width: 10px; height: 10px; background: var(--goru-blue); border-radius: 2px; flex-shrink: 0; }
+
+    .search-input {
+      width: 100%;
+      border: none;
+      background: transparent;
+      padding: 8px 0;
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--text-dark);
+      outline: none;
+    }
+
+    .search-input::placeholder { color: #94A3B8; font-weight: 500; }
+
+    .divider { height: 1px; background: #E2E8F0; margin-left: 22px; }
+
+    /* Lista de Sugerencias */
+    .suggestions-list {
+      background: #FFFFFF;
+      border-radius: 12px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+      max-height: 150px;
+      overflow-y: auto;
+      display: none;
+      position: absolute;
+      width: 100%;
+      z-index: 2000;
+      left: 0;
+      top: 100%;
+      margin-top: 4px;
+    }
+    .suggestion-item {
+      padding: 10px 14px;
+      font-size: 13px;
+      border-bottom: 1px solid #F1F5F9;
+      cursor: pointer;
+      color: #334155;
+    }
+    .suggestion-item:hover { background: #F8FAFC; color: var(--goru-blue); }
+
+    /* Opciones de Vehículos (UberX / Moto / Flete) */
+    .services-list {
+      display: flex;
+      gap: 10px;
+      margin-top: 4px;
+    }
+
     .service-card {
+      flex: 1;
       background: #F8FAFC;
       border: 2px solid #E2E8F0;
-      border-radius: 14px;
-      padding: 8px 4px;
+      border-radius: 16px;
+      padding: 10px 6px;
       text-align: center;
       cursor: pointer;
-      transition: all 0.2s ease;
+      transition: all 0.2s;
     }
-    .service-card.active { border-color: var(--goru-blue); background: rgba(0, 102, 255, 0.06); }
-    .service-card .icon { font-size: 22px; display: block; margin-bottom: 2px; }
-    .service-card span { font-size: 12px; font-weight: 800; color: #1E293B; }
 
-    /* Desglose de Tarifa */
-    .trip-info { display: flex; justify-content: space-between; background: #F1F5F9; padding: 10px 16px; border-radius: 12px; margin-bottom: 10px; }
-    .info-box { text-align: center; }
-    .info-box .label { font-size: 10px; color: var(--text-sub); text-transform: uppercase; font-weight: 800; }
-    .info-box .val { font-size: 14px; font-weight: 800; color: #0F172A; }
-    .info-box .price { color: var(--goru-blue); font-size: 16px; }
+    .service-card.active {
+      border-color: var(--goru-blue);
+      background: rgba(0, 102, 255, 0.05);
+    }
 
-    /* Botón de Confirmación */
+    .service-card .icon { font-size: 26px; display: block; margin-bottom: 2px; }
+    .service-card .title { font-size: 13px; font-weight: 800; color: var(--text-dark); }
+
+    /* Resumen de Tarifa */
+    .fare-summary {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #F1F5F9;
+      padding: 12px 18px;
+      border-radius: 14px;
+    }
+    .fare-box { text-align: center; }
+    .fare-label { font-size: 10px; text-transform: uppercase; color: var(--text-muted); font-weight: 800; }
+    .fare-val { font-size: 15px; font-weight: 800; }
+    .fare-price { font-size: 18px; color: var(--goru-blue); font-weight: 900; }
+
+    /* Botón Confirmar Gorú */
     .btn-confirm {
       width: 100%;
       background: var(--goru-blue);
       color: #FFFFFF;
       border: none;
-      padding: 14px;
-      border-radius: 14px;
-      font-size: 16px;
+      padding: 16px;
+      border-radius: 16px;
+      font-size: 17px;
       font-weight: 800;
       cursor: pointer;
-      box-shadow: 0 4px 14px rgba(0, 102, 255, 0.3);
+      box-shadow: 0 6px 18px rgba(0, 102, 255, 0.3);
+      transition: background 0.2s;
     }
+    .btn-confirm:active { background: var(--goru-blue-hover); }
   </style>
 </head>
 <body>
 
   <div id="app">
     <header>
-      <div class="brand-container">
-        <!-- Solo se muestra el logo grande sin texto al lado -->
-        <img src="/logo.png" alt="Gorú" class="brand-logo" onerror="this.onerror=null; this.src='https://via.placeholder.com/120x44/0066FF/FFFFFF?text=GORU';">
-      </div>
+      <!-- Logo mucho más grande y sin textos secundarios -->
+      <img src="/logo.png" alt="Gorú" class="brand-logo" onerror="this.onerror=null; this.src='https://via.placeholder.com/150x54/0066FF/FFFFFF?text=GORU';">
       <div class="status-badge">
         <div class="status-dot"></div> Online
       </div>
     </header>
 
-    <!-- Contenedor del mapa con altura garantizada -->
-    <div id="map-wrapper">
-      <div id="map"></div>
-    </div>
+    <div id="map"></div>
 
-    <div class="booking-panel">
-      <div class="input-group">
-        <span class="input-label">Punto de salida</span>
-        <div id="geocoder-origin"></div>
+    <!-- Panel Inferior Clon Uber -->
+    <div class="uber-sheet">
+      <div class="sheet-handle"></div>
+
+      <div class="search-container">
+        <div class="input-row">
+          <div class="dot-origin"></div>
+          <input type="text" id="origin-input" class="search-input" placeholder="¿Dónde te buscamos?" oninput="searchAddress(this.value, 'origin')">
+          <div id="origin-suggestions" class="suggestions-list"></div>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="input-row">
+          <div class="dot-dest"></div>
+          <input type="text" id="dest-input" class="search-input" placeholder="¿A dónde vas?" oninput="searchAddress(this.value, 'dest')">
+          <div id="dest-suggestions" class="suggestions-list"></div>
+        </div>
       </div>
 
-      <div class="input-group">
-        <span class="input-label">Destino</span>
-        <div id="geocoder-destination"></div>
-      </div>
-
-      <div class="services-grid">
-        <div class="service-card active" onclick="selectVehicle('Auto', 350, this)">
+      <!-- Selector de Vehículo -->
+      <div class="services-list">
+        <div class="service-card active" onclick="selectService('Auto', 350, this)">
           <span class="icon">🚗</span>
-          <span>Auto</span>
+          <span class="title">Auto</span>
         </div>
-        <div class="service-card" onclick="selectVehicle('Moto', 200, this)">
+        <div class="service-card" onclick="selectService('Moto', 200, this)">
           <span class="icon">🛵</span>
-          <span>Moto</span>
+          <span class="title">Moto</span>
         </div>
-        <div class="service-card" onclick="selectVehicle('Flete', 600, this)">
+        <div class="service-card" onclick="selectService('Flete', 600, this)">
           <span class="icon">🚚</span>
-          <span>Flete</span>
+          <span class="title">Flete</span>
         </div>
       </div>
 
-      <div class="trip-info">
-        <div class="info-box">
-          <div class="label">Distancia</div>
-          <div class="val" id="val-dist">0.0 km</div>
+      <div class="fare-summary">
+        <div class="fare-box">
+          <div class="fare-label">Distancia</div>
+          <div class="fare-val" id="val-dist">0.0 km</div>
         </div>
-        <div class="info-box">
-          <div class="label">Tiempo</div>
-          <div class="val" id="val-time">0 min</div>
+        <div class="fare-box">
+          <div class="fare-label">Tiempo</div>
+          <div class="fare-val" id="val-time">0 min</div>
         </div>
-        <div class="info-box">
-          <div class="label">Estimado</div>
-          <div class="val price" id="val-price">$0</div>
+        <div class="fare-box">
+          <div class="fare-label">Estimado</div>
+          <div class="fare-val fare-price" id="val-price">$0</div>
         </div>
       </div>
 
-      <button class="btn-confirm" id="btn-request" onclick="confirmBooking()">Ingresá origen y destino</button>
+      <button class="btn-confirm" id="btn-submit" onclick="confirmTrip()">Confirmar Pedido</button>
     </div>
   </div>
 
   <script>
-    const MAPBOX_TOKEN = 'pk.eyJ1IjoiZ29ydTIwMjYiLCJhIjoiY204Y2g2bnk3MGExNTJyc2p1bjgwNGszZCJ9.9U322q_xP2B7m8T91sN9DA';
-    mapboxgl.accessToken = MAPBOX_TOKEN;
+    // Inicializar mapa de calles con Leaflet (Sin API Keys ni restricciones)
+    const map = L.map('map', { zoomControl: false }).setView([-34.6037, -58.3816], 13);
 
-    const map = new mapboxgl.Map({
-      container: 'map',
-      style: 'mapbox://styles/mapbox/streets-v12',
-      center: [-58.3816, -34.6037],
-      zoom: 13
-    });
-
-    // Forzar redimensionado para que cargue el mapa sin pantalla en blanco
-    setTimeout(() => { map.resize(); }, 500);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '© OpenStreetMap'
+    }).addTo(map);
 
     let originCoords = null;
     let destCoords = null;
+    let originMarker = null;
+    let destMarker = null;
+    let routeLine = null;
     let ratePerKm = 350;
-    let estimatedTotal = 0;
+    let calculatedPrice = 0;
 
-    const geocoderOrigin = new MapboxGeocoder({
-      accessToken: mapboxgl.accessToken,
-      mapboxgl: mapboxgl,
-      placeholder: '¿Dónde te buscamos?',
-      country: 'ar',
-      language: 'es'
-    });
-    geocoderOrigin.addTo('#geocoder-origin');
+    // Búsqueda de direcciones usando Nominatim (Gratuito y sin fallas)
+    let searchTimeout = null;
+    function searchAddress(query, type) {
+      clearTimeout(searchTimeout);
+      const suggestionsContainer = document.getElementById(`${type}-suggestions`);
+      
+      if (query.length < 3) {
+        suggestionsContainer.style.display = 'none';
+        return;
+      }
 
-    const geocoderDest = new MapboxGeocoder({
-      accessToken: mapboxgl.accessToken,
-      mapboxgl: mapboxgl,
-      placeholder: '¿A dónde vas?',
-      country: 'ar',
-      language: 'es'
-    });
-    geocoderDest.addTo('#geocoder-destination');
+      searchTimeout = setTimeout(async () => {
+        try {
+          const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&countrycodes=ar&limit=5`);
+          const data = await res.json();
 
-    geocoderOrigin.on('result', (e) => {
-      originCoords = e.result.center;
-      calculateTripRoute();
-    });
-
-    geocoderDest.on('result', (e) => {
-      destCoords = e.result.center;
-      calculateTripRoute();
-    });
-
-    function selectVehicle(type, rate, element) {
-      ratePerKm = rate;
-      document.querySelectorAll('.service-card').forEach(card => card.classList.remove('active'));
-      element.classList.add('active');
-      if (originCoords && destCoords) calculateTripRoute();
+          suggestionsContainer.innerHTML = '';
+          if (data.length > 0) {
+            suggestionsContainer.style.display = 'block';
+            data.forEach(item => {
+              const div = document.createElement('div');
+              div.className = 'suggestion-item';
+              div.innerText = item.display_name;
+              div.onclick = () => selectAddress(item, type);
+              suggestionsContainer.appendChild(div);
+            });
+          } else {
+            suggestionsContainer.style.display = 'none';
+          }
+        } catch (err) {
+          console.error("Error buscando dirección:", err);
+        }
+      }, 300);
     }
 
-    async function calculateTripRoute() {
+    function selectAddress(item, type) {
+      const lat = parseFloat(item.lat);
+      const lon = parseFloat(item.lon);
+      document.getElementById(`${type}-suggestions`).style.display = 'none';
+      document.getElementById(`${type}-input`).value = item.display_name.split(',')[0];
+
+      if (type === 'origin') {
+        originCoords = [lat, lon];
+        if (originMarker) map.removeLayer(originMarker);
+        originMarker = L.marker(originCoords).addTo(map).bindPopup('Origen').openPopup();
+      } else {
+        destCoords = [lat, lon];
+        if (destMarker) map.removeLayer(destMarker);
+        destMarker = L.marker(destCoords).addTo(map).bindPopup('Destino').openPopup();
+      }
+
+      if (originCoords && destCoords) {
+        calculateRoute();
+      } else {
+        map.setView([lat, lon], 14);
+      }
+    }
+
+    function selectService(type, rate, elem) {
+      ratePerKm = rate;
+      document.querySelectorAll('.service-card').forEach(c => c.classList.remove('active'));
+      elem.classList.add('active');
+      if (originCoords && destCoords) calculateRoute();
+    }
+
+    async function calculateRoute() {
       if (!originCoords || !destCoords) return;
 
       try {
-        const res = await fetch('/api/cotizar', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            origen: { lng: originCoords[0], lat: originCoords[1] },
-            destino: { lng: destCoords[0], lat: destCoords[1] },
-            tipoVehiculo: document.querySelector('.service-card.active span').innerText
-          })
-        });
-
+        // Consultar OSRM para trazar la ruta y distancia exacta
+        const res = await fetch(`https://router.project-osrm.org/route/v1/driving/${originCoords[1]},${originCoords[0]};${destCoords[1]},${destCoords[0]}?overview=full&geometries=geojson`);
         const data = await res.json();
 
-        if (data.exito) {
-          estimatedTotal = data.precioEstimado;
-          document.getElementById('val-dist').innerText = `${data.distanciaKm} km`;
-          document.getElementById('val-time').innerText = `${data.duracionMin} min`;
-          document.getElementById('val-price').innerText = `$${data.precioEstimado}`;
+        if (data.routes && data.routes.length > 0) {
+          const route = data.routes[0];
+          const distKm = (route.distance / 1000).toFixed(2);
+          const durMin = Math.round(route.duration / 60);
+
+          calculatedPrice = Math.round(distKm * ratePerKm + 500);
+
+          document.getElementById('val-dist').innerText = `${distKm} km`;
+          document.getElementById('val-time').innerText = `${durMin} min`;
+          document.getElementById('val-price').innerText = `$${calculatedPrice}`;
           
-          const btn = document.getElementById('btn-request');
-          btn.innerText = `Confirmar Gorú ($${data.precioEstimado})`;
+          document.getElementById('btn-submit').innerText = `Confirmar Gorú ($${calculatedPrice})`;
 
-          const routeGeoJSON = {
-            type: 'Feature',
-            properties: {},
-            geometry: data.geometriaRuta
-          };
+          // Dibujar la línea de ruta en Azul Gorú
+          if (routeLine) map.removeLayer(routeLine);
+          
+          const coordinates = route.geometry.coordinates.map(c => [c[1], c[0]]);
+          routeLine = L.polyline(coordinates, { color: '#0066FF', weight: 6, opacity: 0.8 }).addTo(map);
 
-          if (map.getSource('route')) {
-            map.getSource('route').setData(routeGeoJSON);
-          } else {
-            map.addLayer({
-              id: 'route',
-              type: 'line',
-              source: { type: 'geojson', data: routeGeoJSON },
-              layout: { 'line-join': 'round', 'line-cap': 'round' },
-              paint: { 'line-color': '#0066FF', 'line-width': 6 }
-            });
-          }
-
-          const bounds = new mapboxgl.LngLatBounds();
-          bounds.extend(originCoords);
-          bounds.extend(destCoords);
-          map.fitBounds(bounds, { padding: 50 });
+          // Ajustar mapa para enfocar toda la ruta
+          map.fitBounds(routeLine.getBounds(), { padding: [40, 40] });
         }
       } catch (err) {
         console.error("Error calculando ruta:", err);
       }
     }
 
-    function confirmBooking() {
+    function confirmTrip() {
       if (!originCoords || !destCoords) {
-        alert('Por favor selecciona origen y destino.');
+        alert("Por favor ingresá un origen y destino.");
         return;
       }
-      alert(`¡Viaje solicitado con éxito! Total estimado: $${estimatedTotal}`);
+      alert(`¡Viaje solicitado con éxito! Total: $${calculatedPrice}`);
     }
   </script>
 </body>
