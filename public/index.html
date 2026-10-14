@@ -3,51 +3,52 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Goru - Pedí tu viaje</title>
+  <title>Gorú - Tu viaje al instante</title>
   
   <!-- Mapbox GL JS -->
   <script src="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js"></script>
   <link href="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css" rel="stylesheet" />
   
-  <!-- Mapbox Geocoder -->
+  <!-- Mapbox Geocoder (Buscador con autocompletado) -->
   <script src="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v5.0.0/mapbox-gl-geocoder.min.js"></script>
   <link rel="stylesheet" href="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v5.0.0/mapbox-gl-geocoder.css" type="text/css">
 
   <style>
     :root {
       --goru-blue: #0066FF;
-      --goru-blue-dark: #004ecc;
-      --goru-bg-light: #F4F7FA;
-      --text-dark: #1E293B;
+      --goru-blue-dark: #004ECC;
+      --bg-gray: #F8FAFC;
+      --text-main: #0F172A;
+      --text-sub: #64748B;
     }
 
-    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
-    html, body { width: 100%; height: 100%; overflow: hidden; background-color: var(--goru-bg-light); color: var(--text-dark); }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    html, body { width: 100%; height: 100%; overflow: hidden; background-color: var(--bg-gray); color: var(--text-main); }
 
     #app { display: flex; flex-direction: column; width: 100%; height: 100vh; position: relative; }
     
-    /* Header Premium con Logo Goru */
+    /* Header Superior Limpio Estilo Uber */
     header {
       background: #FFFFFF;
-      padding: 10px 16px;
+      padding: 12px 18px;
       display: flex;
       justify-content: space-between;
       align-items: center;
-      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+      box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
       z-index: 20;
-      height: 60px;
+      height: 64px;
     }
 
     .brand-container { display: flex; align-items: center; gap: 10px; }
-    .brand-logo { height: 38px; width: auto; border-radius: 6px; object-fit: contain; }
-    .brand-title { font-size: 22px; font-weight: 900; color: var(--goru-blue); letter-spacing: -0.5px; }
+    .brand-logo { height: 36px; width: auto; object-fit: contain; }
+    .brand-title { font-size: 24px; font-weight: 900; color: var(--goru-blue); letter-spacing: -0.5px; }
 
     .status-badge { 
-      background: rgba(0, 102, 255, 0.1); 
+      background: rgba(0, 102, 255, 0.08); 
       color: var(--goru-blue); 
-      padding: 6px 12px; 
+      padding: 6px 14px; 
       border-radius: 20px; 
-      font-size: 12px; 
+      font-size: 13px; 
       font-weight: 700; 
       display: flex;
       align-items: center;
@@ -55,76 +56,78 @@
     }
     .status-dot { width: 8px; height: 8px; background: #10B981; border-radius: 50%; }
 
-    /* Contenedor del Mapa */
-    #map-wrapper { position: absolute; top: 60px; bottom: 0; width: 100%; height: calc(100vh - 60px); z-index: 1; }
+    /* Mapa Contenedor */
+    #map-wrapper { position: absolute; top: 64px; bottom: 0; width: 100%; height: calc(100vh - 64px); z-index: 1; }
     #map { width: 100%; height: 100%; }
 
-    /* Panel Flotante de Reserva (Estilo moderno) */
+    /* Panel Flotante Estilo Uber / DiDi */
     .booking-panel {
       position: absolute;
-      bottom: 12px;
-      left: 12px;
-      right: 12px;
+      bottom: 16px;
+      left: 14px;
+      right: 14px;
       background: #FFFFFF;
-      border-radius: 20px;
-      padding: 18px;
-      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+      border-radius: 24px;
+      padding: 20px;
+      box-shadow: 0 12px 36px rgba(0, 0, 0, 0.12);
       z-index: 10;
       max-width: 480px;
       margin: 0 auto;
     }
 
     .input-group { margin-bottom: 10px; }
-    .input-label { font-size: 11px; text-transform: uppercase; color: #64748B; font-weight: 700; margin-bottom: 4px; display: block; }
+    .input-label { font-size: 11px; text-transform: uppercase; color: var(--text-sub); font-weight: 800; margin-bottom: 4px; display: block; letter-spacing: 0.5px; }
     
+    /* Buscadores estilizados */
     .mapboxgl-ctrl-geocoder {
       width: 100% !important;
       max-width: none !important;
       background-color: #F1F5F9 !important;
-      border-radius: 12px !important;
+      border-radius: 14px !important;
       box-shadow: none !important;
       border: 1px solid #E2E8F0 !important;
     }
-    .mapboxgl-ctrl-geocoder--input { color: var(--text-dark) !important; font-size: 14px !important; }
+    .mapboxgl-ctrl-geocoder--input { color: var(--text-main) !important; font-size: 14px !important; }
+    .mapboxgl-ctrl-geocoder--icon-search { fill: var(--goru-blue) !important; }
 
-    /* Selección de vehículo */
-    .services-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 14px 0; }
-    .service-btn {
+    /* Tarjetas de Selección de Vehículo (Auto, Moto, Flete) */
+    .services-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 16px 0; }
+    .service-card {
       background: #F8FAFC;
       border: 2px solid #E2E8F0;
-      border-radius: 14px;
-      padding: 10px 4px;
-      color: var(--text-dark);
+      border-radius: 16px;
+      padding: 12px 6px;
+      color: var(--text-main);
       text-align: center;
       cursor: pointer;
       transition: all 0.2s ease;
     }
-    .service-btn.active { border-color: var(--goru-blue); background: rgba(0, 102, 255, 0.08); font-weight: bold; }
-    .service-btn .icon { font-size: 20px; display: block; margin-bottom: 2px; }
-    .service-btn span { font-size: 12px; font-weight: 700; color: #334155; }
+    .service-card.active { border-color: var(--goru-blue); background: rgba(0, 102, 255, 0.06); }
+    .service-card .icon { font-size: 24px; display: block; margin-bottom: 4px; }
+    .service-card span { font-size: 13px; font-weight: 800; color: #1E293B; }
 
-    /* Detalles de Tarifa */
-    .trip-details { display: flex; justify-content: space-between; background: #F1F5F9; padding: 10px 16px; border-radius: 12px; margin-bottom: 12px; }
-    .detail-item { text-align: center; }
-    .detail-item .label { font-size: 10px; color: #64748B; text-transform: uppercase; font-weight: 700; }
-    .detail-item .value { font-size: 14px; font-weight: 800; color: #0F172A; }
-    .detail-item .price { color: var(--goru-blue); font-size: 16px; }
+    /* Desglose de Tarifa */
+    .trip-info { display: flex; justify-content: space-between; background: #F1F5F9; padding: 12px 18px; border-radius: 14px; margin-bottom: 14px; }
+    .info-box { text-align: center; }
+    .info-box .label { font-size: 10px; color: var(--text-sub); text-transform: uppercase; font-weight: 800; }
+    .info-box .val { font-size: 15px; font-weight: 800; color: #0F172A; }
+    .info-box .price { color: var(--goru-blue); font-size: 18px; }
 
-    /* Botón Confirmar */
+    /* Botón de Confirmación Principal */
     .btn-confirm {
       width: 100%;
       background: var(--goru-blue);
-      color: white;
+      color: #FFFFFF;
       border: none;
-      padding: 14px;
-      border-radius: 14px;
-      font-size: 16px;
+      padding: 16px;
+      border-radius: 16px;
+      font-size: 17px;
       font-weight: 800;
       cursor: pointer;
-      box-shadow: 0 4px 12px rgba(0, 102, 255, 0.3);
-      transition: background 0.2s;
+      box-shadow: 0 6px 16px rgba(0, 102, 255, 0.35);
+      transition: all 0.2s;
     }
-    .btn-confirm:active { background: var(--goru-blue-dark); transform: scale(0.99); }
+    .btn-confirm:active { background: var(--goru-blue-dark); transform: scale(0.98); }
   </style>
 </head>
 <body>
@@ -132,12 +135,11 @@
   <div id="app">
     <header>
       <div class="brand-container">
-        <!-- Muestra el logo subido a la carpeta public/logo.png -->
-        <img src="/logo.png" alt="Goru Logo" class="brand-logo" onerror="this.style.display='none'">
-        <span class="brand-title">GORU</span>
+        <img src="/logo.png" alt="Gorú Logo" class="brand-logo" onerror="this.style.display='none'">
+        <span class="brand-title">Gorú</span>
       </div>
       <div class="status-badge">
-        <div class="status-dot"></div> Online
+        <div class="status-dot"></div> Disponible
       </div>
     </header>
 
@@ -147,7 +149,7 @@
 
     <div class="booking-panel">
       <div class="input-group">
-        <span class="input-label">Punto de partida</span>
+        <span class="input-label">Punto de salida</span>
         <div id="geocoder-origin"></div>
       </div>
 
@@ -157,44 +159,44 @@
       </div>
 
       <div class="services-grid">
-        <div class="service-btn active" onclick="selectService('Auto', 350, this)">
+        <div class="service-card active" onclick="selectVehicle('Auto', 350, this)">
           <span class="icon">🚗</span>
           <span>Auto</span>
         </div>
-        <div class="service-btn" onclick="selectService('Moto', 200, this)">
+        <div class="service-card" onclick="selectVehicle('Moto', 200, this)">
           <span class="icon">🛵</span>
           <span>Moto</span>
         </div>
-        <div class="service-btn" onclick="selectService('Flete', 600, this)">
+        <div class="service-card" onclick="selectVehicle('Flete', 600, this)">
           <span class="icon">🚚</span>
           <span>Flete</span>
         </div>
       </div>
 
-      <div class="trip-details">
-        <div class="detail-item">
+      <div class="trip-info">
+        <div class="info-box">
           <div class="label">Distancia</div>
-          <div class="value" id="val-dist">0.0 km</div>
+          <div class="val" id="val-dist">0.0 km</div>
         </div>
-        <div class="detail-item">
+        <div class="info-box">
           <div class="label">Tiempo</div>
-          <div class="value" id="val-time">0 min</div>
+          <div class="val" id="val-time">0 min</div>
         </div>
-        <div class="detail-item">
+        <div class="info-box">
           <div class="label">Estimado</div>
-          <div class="value price" id="val-price">$0</div>
+          <div class="val price" id="val-price">$0</div>
         </div>
       </div>
 
-      <button class="btn-confirm" id="btn-request" onclick="confirmTrip()">Elegí origen y destino</button>
+      <button class="btn-confirm" id="btn-request" onclick="confirmBooking()">Ingresá origen y destino</button>
     </div>
   </div>
 
   <script>
-    const MAPBOX_TOKEN = 'pk.eyJ1IjoiZ29ydTIwMjYiLCJhIjoiY204Y2g2bnk3MGExNTJyc2p1bjgwNGszZCJ9.9U322q_xP2B7m8T91sN9DA';
+    const MAPBOX_TOKEN = 'pk.eyJ1IjoiZ29ydTIwMjYiLCJhIjoiY211Ym94emIzMGlnODQ4c2JrNnFyZG40OCJ9.au_s_1ynUiNDfNP7axIlyg';
     mapboxgl.accessToken = MAPBOX_TOKEN;
 
-    // Mapa con estilo de calles claro
+    // Estilo de mapa claro y detallado de alta legibilidad
     const map = new mapboxgl.Map({
       container: 'map',
       style: 'mapbox://styles/mapbox/streets-v12',
@@ -202,22 +204,23 @@
       zoom: 13
     });
 
-    // Corrección para forzar al mapa a ocupar todo el marco
+    // Corrección para renderizar correctamente el mapa
     map.on('load', () => {
       setTimeout(() => map.resize(), 300);
     });
 
-    let originCoord = null;
-    let destCoord = null;
+    let originCoords = null;
+    let destCoords = null;
     let ratePerKm = 350;
-    let calculatedPrice = 0;
+    let estimatedTotal = 0;
 
     // Buscador Origen
     const geocoderOrigin = new MapboxGeocoder({
       accessToken: mapboxgl.accessToken,
       mapboxgl: mapboxgl,
       placeholder: '¿Dónde te buscamos?',
-      country: 'ar'
+      country: 'ar',
+      language: 'es'
     });
     geocoderOrigin.addTo('#geocoder-origin');
 
@@ -226,78 +229,88 @@
       accessToken: mapboxgl.accessToken,
       mapboxgl: mapboxgl,
       placeholder: '¿A dónde vas?',
-      country: 'ar'
+      country: 'ar',
+      language: 'es'
     });
     geocoderDest.addTo('#geocoder-destination');
 
     geocoderOrigin.on('result', (e) => {
-      originCoord = e.result.center;
-      updateRoute();
+      originCoords = e.result.center;
+      calculateTripRoute();
     });
 
     geocoderDest.on('result', (e) => {
-      destCoord = e.result.center;
-      updateRoute();
+      destCoords = e.result.center;
+      calculateTripRoute();
     });
 
-    function selectService(type, rate, element) {
+    function selectVehicle(type, rate, element) {
       ratePerKm = rate;
-      document.querySelectorAll('.service-btn').forEach(btn => btn.classList.remove('active'));
+      document.querySelectorAll('.service-card').forEach(card => card.classList.remove('active'));
       element.classList.add('active');
-      if (originCoord && destCoord) updateRoute();
+      if (originCoords && destCoords) calculateTripRoute();
     }
 
-    async function updateRoute() {
-      if (!originCoord || !destCoord) return;
+    async function calculateTripRoute() {
+      if (!originCoords || !destCoords) return;
 
-      const query = await fetch(
-        `https://api.mapbox.com/directions/v5/mapbox/driving/${originCoord[0]},${originCoord[1]};${destCoord[0]},${destCoord[1]}?steps=true&geometries=geojson&access_token=${MAPBOX_TOKEN}`
-      );
-      const json = await query.json();
-      const data = json.routes[0];
-      
-      const distanceKm = (data.distance / 1000).toFixed(2);
-      const durationMin = Math.round(data.duration / 60);
-      calculatedPrice = Math.round(distanceKm * ratePerKm + 500);
-
-      document.getElementById('val-dist').innerText = `${distanceKm} km`;
-      document.getElementById('val-time').innerText = `${durationMin} min`;
-      document.getElementById('val-price').innerText = `$${calculatedPrice}`;
-      
-      const btn = document.getElementById('btn-request');
-      btn.innerText = `Confirmar Pedido ($${calculatedPrice})`;
-
-      // Dibujar ruta en Azul Goru
-      const routeGeoJSON = {
-        type: 'Feature',
-        properties: {},
-        geometry: data.geometry
-      };
-
-      if (map.getSource('route')) {
-        map.getSource('route').setData(routeGeoJSON);
-      } else {
-        map.addLayer({
-          id: 'route',
-          type: 'line',
-          source: { type: 'geojson', data: routeGeoJSON },
-          layout: { 'line-join': 'round', 'line-cap': 'round' },
-          paint: { 'line-color': '#0066FF', 'line-width': 6 }
+      try {
+        const res = await fetch('/api/cotizar', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            origen: { lng: originCoords[0], lat: originCoords[1] },
+            destino: { lng: destCoords[0], lat: destCoords[1] },
+            tipoVehiculo: document.querySelector('.service-card.active span').innerText
+          })
         });
-      }
 
-      const bounds = new mapboxgl.LngLatBounds();
-      bounds.extend(originCoord);
-      bounds.extend(destCoord);
-      map.fitBounds(bounds, { padding: 60 });
+        const data = await res.json();
+
+        if (data.exito) {
+          estimatedTotal = data.precioEstimado;
+          document.getElementById('val-dist').innerText = `${data.distanciaKm} km`;
+          document.getElementById('val-time').innerText = `${data.duracionMin} min`;
+          document.getElementById('val-price').innerText = `$${data.precioEstimado}`;
+          
+          const btn = document.getElementById('btn-request');
+          btn.innerText = `Confirmar Gorú ($${data.precioEstimado})`;
+
+          // Dibujar ruta en Azul Gorú
+          const routeGeoJSON = {
+            type: 'Feature',
+            properties: {},
+            geometry: data.geometriaRuta
+          };
+
+          if (map.getSource('route')) {
+            map.getSource('route').setData(routeGeoJSON);
+          } else {
+            map.addLayer({
+              id: 'route',
+              type: 'line',
+              source: { type: 'geojson', data: routeGeoJSON },
+              layout: { 'line-join': 'round', 'line-cap': 'round' },
+              paint: { 'line-color': '#0066FF', 'line-width': 6 }
+            });
+          }
+
+          const bounds = new mapboxgl.LngLatBounds();
+          bounds.extend(originCoords);
+          bounds.extend(destCoords);
+          map.fitBounds(bounds, { padding: 60 });
+        }
+      } catch (err) {
+        console.error("Error calculando ruta:", err);
+      }
     }
 
-    function confirmTrip() {
-      if (!originCoord || !destCoord) {
-        alert('Por favor elegí origen y destino primero.');
+    function confirmBooking() {
+      if (!originCoords || !destCoords) {
+        alert('Por favor selecciona origen y destino.');
         return;
       }
-      alert(`¡Viaje solicitado con éxito! Total: $${calculatedPrice}`);
+      alert(`¡Viaje solicitado con éxito! Total estimado: $${estimatedTotal}`);
     }
   </script>
 </body>
