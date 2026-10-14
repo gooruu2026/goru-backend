@@ -9,7 +9,7 @@
   <script src="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js"></script>
   <link href="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css" rel="stylesheet" />
   
-  <!-- Mapbox Geocoder (Buscador con autocompletado) -->
+  <!-- Mapbox Geocoder -->
   <script src="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v5.0.0/mapbox-gl-geocoder.min.js"></script>
   <link rel="stylesheet" href="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v5.0.0/mapbox-gl-geocoder.css" type="text/css">
 
@@ -27,21 +27,20 @@
 
     #app { display: flex; flex-direction: column; width: 100%; height: 100vh; position: relative; }
     
-    /* Header Superior Limpio Estilo Uber */
+    /* Header Superior con Logo Limpio y Grande */
     header {
       background: #FFFFFF;
-      padding: 12px 18px;
+      padding: 10px 16px;
       display: flex;
       justify-content: space-between;
       align-items: center;
-      box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+      box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
       z-index: 20;
       height: 64px;
     }
 
-    .brand-container { display: flex; align-items: center; gap: 10px; }
-    .brand-logo { height: 36px; width: auto; object-fit: contain; }
-    .brand-title { font-size: 24px; font-weight: 900; color: var(--goru-blue); letter-spacing: -0.5px; }
+    .brand-container { display: flex; align-items: center; }
+    .brand-logo { height: 44px; width: auto; object-fit: contain; }
 
     .status-badge { 
       background: rgba(0, 102, 255, 0.08); 
@@ -56,78 +55,70 @@
     }
     .status-dot { width: 8px; height: 8px; background: #10B981; border-radius: 50%; }
 
-    /* Mapa Contenedor */
-    #map-wrapper { position: absolute; top: 64px; bottom: 0; width: 100%; height: calc(100vh - 64px); z-index: 1; }
+    /* Mapa con altura fija garantizada para que no se ponga en blanco */
+    #map-wrapper { width: 100%; height: 50vh; position: relative; z-index: 1; }
     #map { width: 100%; height: 100%; }
 
     /* Panel Flotante Estilo Uber / DiDi */
     .booking-panel {
-      position: absolute;
-      bottom: 16px;
-      left: 14px;
-      right: 14px;
+      flex: 1;
       background: #FFFFFF;
-      border-radius: 24px;
-      padding: 20px;
-      box-shadow: 0 12px 36px rgba(0, 0, 0, 0.12);
+      border-top-left-radius: 24px;
+      border-top-right-radius: 24px;
+      padding: 16px 20px;
+      box-shadow: 0 -8px 30px rgba(0, 0, 0, 0.1);
       z-index: 10;
-      max-width: 480px;
-      margin: 0 auto;
+      overflow-y: auto;
     }
 
-    .input-group { margin-bottom: 10px; }
-    .input-label { font-size: 11px; text-transform: uppercase; color: var(--text-sub); font-weight: 800; margin-bottom: 4px; display: block; letter-spacing: 0.5px; }
+    .input-group { margin-bottom: 8px; }
+    .input-label { font-size: 11px; text-transform: uppercase; color: var(--text-sub); font-weight: 800; margin-bottom: 2px; display: block; }
     
-    /* Buscadores estilizados */
     .mapboxgl-ctrl-geocoder {
       width: 100% !important;
       max-width: none !important;
       background-color: #F1F5F9 !important;
-      border-radius: 14px !important;
+      border-radius: 12px !important;
       box-shadow: none !important;
       border: 1px solid #E2E8F0 !important;
     }
     .mapboxgl-ctrl-geocoder--input { color: var(--text-main) !important; font-size: 14px !important; }
-    .mapboxgl-ctrl-geocoder--icon-search { fill: var(--goru-blue) !important; }
 
-    /* Tarjetas de Selección de Vehículo (Auto, Moto, Flete) */
-    .services-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 16px 0; }
+    /* Selección de Vehículo */
+    .services-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 10px 0; }
     .service-card {
       background: #F8FAFC;
       border: 2px solid #E2E8F0;
-      border-radius: 16px;
-      padding: 12px 6px;
-      color: var(--text-main);
+      border-radius: 14px;
+      padding: 8px 4px;
       text-align: center;
       cursor: pointer;
       transition: all 0.2s ease;
     }
     .service-card.active { border-color: var(--goru-blue); background: rgba(0, 102, 255, 0.06); }
-    .service-card .icon { font-size: 24px; display: block; margin-bottom: 4px; }
-    .service-card span { font-size: 13px; font-weight: 800; color: #1E293B; }
+    .service-card .icon { font-size: 22px; display: block; margin-bottom: 2px; }
+    .service-card span { font-size: 12px; font-weight: 800; color: #1E293B; }
 
     /* Desglose de Tarifa */
-    .trip-info { display: flex; justify-content: space-between; background: #F1F5F9; padding: 12px 18px; border-radius: 14px; margin-bottom: 14px; }
+    .trip-info { display: flex; justify-content: space-between; background: #F1F5F9; padding: 10px 16px; border-radius: 12px; margin-bottom: 10px; }
     .info-box { text-align: center; }
     .info-box .label { font-size: 10px; color: var(--text-sub); text-transform: uppercase; font-weight: 800; }
-    .info-box .val { font-size: 15px; font-weight: 800; color: #0F172A; }
-    .info-box .price { color: var(--goru-blue); font-size: 18px; }
+    .info-box .val { font-size: 14px; font-weight: 800; color: #0F172A; }
+    .info-box .price { color: var(--goru-blue); font-size: 16px; }
 
-    /* Botón de Confirmación Principal */
+    /* Botón de Confirmación */
     .btn-confirm {
       width: 100%;
       background: var(--goru-blue);
       color: #FFFFFF;
       border: none;
-      padding: 16px;
-      border-radius: 16px;
-      font-size: 17px;
+      padding: 14px;
+      border-radius: 14px;
+      font-size: 16px;
       font-weight: 800;
       cursor: pointer;
-      box-shadow: 0 6px 16px rgba(0, 102, 255, 0.35);
-      transition: all 0.2s;
+      box-shadow: 0 4px 14px rgba(0, 102, 255, 0.3);
     }
-    .btn-confirm:active { background: var(--goru-blue-dark); transform: scale(0.98); }
   </style>
 </head>
 <body>
@@ -135,14 +126,15 @@
   <div id="app">
     <header>
       <div class="brand-container">
-        <img src="/logo.png" alt="Gorú Logo" class="brand-logo" onerror="this.style.display='none'">
-        <span class="brand-title">Gorú</span>
+        <!-- Solo se muestra el logo grande sin texto al lado -->
+        <img src="/logo.png" alt="Gorú" class="brand-logo" onerror="this.onerror=null; this.src='https://via.placeholder.com/120x44/0066FF/FFFFFF?text=GORU';">
       </div>
       <div class="status-badge">
-        <div class="status-dot"></div> Disponible
+        <div class="status-dot"></div> Online
       </div>
     </header>
 
+    <!-- Contenedor del mapa con altura garantizada -->
     <div id="map-wrapper">
       <div id="map"></div>
     </div>
@@ -193,10 +185,9 @@
   </div>
 
   <script>
-    const MAPBOX_TOKEN = 'pk.eyJ1IjoiZ29ydTIwMjYiLCJhIjoiY211Ym94emIzMGlnODQ4c2JrNnFyZG40OCJ9.au_s_1ynUiNDfNP7axIlyg';
+    const MAPBOX_TOKEN = 'pk.eyJ1IjoiZ29ydTIwMjYiLCJhIjoiY204Y2g2bnk3MGExNTJyc2p1bjgwNGszZCJ9.9U322q_xP2B7m8T91sN9DA';
     mapboxgl.accessToken = MAPBOX_TOKEN;
 
-    // Estilo de mapa claro y detallado de alta legibilidad
     const map = new mapboxgl.Map({
       container: 'map',
       style: 'mapbox://styles/mapbox/streets-v12',
@@ -204,17 +195,14 @@
       zoom: 13
     });
 
-    // Corrección para renderizar correctamente el mapa
-    map.on('load', () => {
-      setTimeout(() => map.resize(), 300);
-    });
+    // Forzar redimensionado para que cargue el mapa sin pantalla en blanco
+    setTimeout(() => { map.resize(); }, 500);
 
     let originCoords = null;
     let destCoords = null;
     let ratePerKm = 350;
     let estimatedTotal = 0;
 
-    // Buscador Origen
     const geocoderOrigin = new MapboxGeocoder({
       accessToken: mapboxgl.accessToken,
       mapboxgl: mapboxgl,
@@ -224,7 +212,6 @@
     });
     geocoderOrigin.addTo('#geocoder-origin');
 
-    // Buscador Destino
     const geocoderDest = new MapboxGeocoder({
       accessToken: mapboxgl.accessToken,
       mapboxgl: mapboxgl,
@@ -276,7 +263,6 @@
           const btn = document.getElementById('btn-request');
           btn.innerText = `Confirmar Gorú ($${data.precioEstimado})`;
 
-          // Dibujar ruta en Azul Gorú
           const routeGeoJSON = {
             type: 'Feature',
             properties: {},
@@ -298,7 +284,7 @@
           const bounds = new mapboxgl.LngLatBounds();
           bounds.extend(originCoords);
           bounds.extend(destCoords);
-          map.fitBounds(bounds, { padding: 60 });
+          map.fitBounds(bounds, { padding: 50 });
         }
       } catch (err) {
         console.error("Error calculando ruta:", err);
